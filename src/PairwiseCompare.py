@@ -68,7 +68,7 @@ class PairwiseCompare:
         if missing_cols:
             raise ValueError(f"Missing columns {missing_cols}")
 
-        if any([not pd.api.types.is_numeric_dtype(_df[col].dtype) for col in _feat_cols]):
+        if any(not pd.api.types.is_numeric_dtype(_df[col].dtype) for col in _feat_cols):
             raise TypeError("At least one of the feature columns is not a numerical data type.")
 
         if _df.isna().any().any():
@@ -95,16 +95,19 @@ class PairwiseCompare:
         self.__antehoc_group_cols = _antehoc_group_cols
         self.__posthoc_group_cols = _posthoc_group_cols
 
-        self.__filtered_antehoc_group_cols, self.__filtered_antehoc_group_names = self.__get_group_fields(
+        self.__filtered_antehoc_group_cols = self.__get_group_fields(
             _group_cols=self.__antehoc_group_cols,
-            _group_names=self.__antehoc_group_names
         )
 
-        self.__filtered_posthoc_group_cols, self.__filtered_posthoc_group_names = self.__get_group_fields(
+        self.__filtered_posthoc_group_cols = self.__get_group_fields(
             _group_cols=self.__posthoc_group_cols,
-            _group_names=self.__posthoc_group_names
         )
 
+        print(self.__antehoc_group_cols)
+        print(self.__posthoc_group_cols)
+        print(self.__filtered_antehoc_group_cols)
+        print(self.__filtered_posthoc_group_cols)
+        print(type(self.__filtered_posthoc_group_cols))
 
     def __warn_empty_comparisons(self, _comparison_type_name):
 
@@ -126,15 +129,13 @@ class PairwiseCompare:
                 raise TypeError(f"{prefix_msg} Data in Iterable is not of type String.")
 
 
-    def __get_group_fields(self, _group_cols, _group_names):
+    def __get_group_fields(self, _group_cols):
         """Get group fields after removing dropped columns."""
 
-        return zip(*[
-            (ante_group_col, ante_group_name)
-            for ante_group_col, ante_group_name in
-            zip(_group_cols, _group_names)
-            if ante_group_col not in self.__drop_cols
-        ])
+        return [
+            group_col for group_col in _group_cols
+            if group_col not in self.__drop_cols
+        ]
 
 
     def __contains_match(self, _groups):
@@ -146,10 +147,10 @@ class PairwiseCompare:
                     return True
 
             else:
-                if any([_groups[0][i] == _groups[1][i] for i in range(len(_groups[0]))]):
+                if any(_groups[0][i] == _groups[1][i] for i in range(len(_groups[0]))):
                     return True
 
-            return False
+        return False
 
 
     def inter_comparisons(self):
@@ -172,13 +173,21 @@ class PairwiseCompare:
             if self.__contains_match(apair):
                 continue
 
+            apair0 = apair[0]
+            apair1 = apair[1]
+
+            # Avoids a future deprecation in the pandas get_group method
+            if not isinstance(apair0, tuple) or not isinstance(apair1, tuple):
+                apair0 = (apair0,)
+                apair1 = (apair1,)
+
             # Extract the keys for the first post hoc group
-            group0df = groupdf.get_group(apair[0]).copy()
+            group0df = groupdf.get_group(apair0).copy()
             group0df = group0df.groupby(self.__posthoc_group_cols)[self.__feat_cols]
             group0_keys = group0df.groups.keys()
 
             # Extract the keys for the second post hoc group
-            group1df = groupdf.get_group(apair[1]).copy()
+            group1df = groupdf.get_group(apair1).copy()
             group1df = group1df.groupby(self.__posthoc_group_cols)[self.__feat_cols]
             group1_keys = group1df.groups.keys()
 
@@ -194,7 +203,15 @@ class PairwiseCompare:
                 if self.__contains_match(ppair):
                     continue
 
-                self.__comparator(group0df.get_group(ppair[0]), group1df.get_group(ppair[1]))
+                ppair0 = ppair[0]
+                ppair1 = ppair[1]
+
+                # Avoids a future deprecation in the pandas get_group method
+                if not isinstance(ppair0, tuple) or not isinstance(ppair1, tuple):
+                    ppair0 = (ppair0,)
+                    ppair1 = (ppair1,)
+
+                self.__comparator(group0df.get_group(ppair0), group1df.get_group(ppair1))
 
                 self.__comparator.save_groups(
                     self.__antehoc_group_cols,
@@ -205,6 +222,7 @@ class PairwiseCompare:
                     self.__posthoc_group_cols,
                     **dict(zip(self.__posthoc_group_names, ppair))
                 )
+
 
 
     def intra_comparisons(self):
@@ -220,6 +238,10 @@ class PairwiseCompare:
 
         # Iterate through each ante group combination
         for agroup in akeys:
+
+            # Avoids a future deprecation in the pandas get_group method
+            if not isinstance(agroup, tuple):
+                agroup = (agroup,)
 
             # Extract keys for poshoc group columns
             group = groupdf.get_group(agroup).copy()
@@ -238,12 +260,22 @@ class PairwiseCompare:
                 if self.__contains_match(ppair):
                     continue
 
+                ppair0 = ppair[0]
+                ppair1 = ppair[1]
+
+                # Avoids a future deprecation in the pandas get_group method
+                if not isinstance(ppair0, tuple) or not isinstance(ppair1, tuple):
+                    ppair0 = (ppair0,)
+                    ppair1 = (ppair1,)
+
+                self.__comparator(group.get_group(ppair0), group.get_group(ppair1))
+
                 self.__comparator.save_groups(
                     self.__filtered_antehoc_group_cols,
-                    **dict(zip(self.__filtered_antehoc_group_names, (agroup, agroup)))
+                    **dict(zip(self.__antehoc_group_names, (agroup, agroup)))
                 )
 
                 self.__comparator.save_groups(
                     self.__filtered_posthoc_group_cols,
-                    **dict(zip(self.__filtered_posthoc_group_names, ppair))
+                    **dict(zip(self.__posthoc_group_names, ppair))
                 )
