@@ -19,7 +19,7 @@ plate4df["Metadata_siRNA"] = plate4df["Metadata_siRNA"].fillna("No siRNA")
 feat_cols = plate4df.columns[~plate4df.columns.str.contains("Metadata")].tolist()
 
 
-# Compute comparison outputs
+# Compute comparison outputs with the PairwiseCompareManager
 @pytest.fixture
 def test_data(request):
 
