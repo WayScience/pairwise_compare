@@ -1,4 +1,4 @@
-# pairwise_compare
+# Pairwise Compare
 This tool allows the user to compare groups of data specified in a tidy-wide pandas dataframe with ease.
 In this repo the capabilities of the PairwiseCompareManger are shown through an example using the nuclear speckle data (`example_pairwise_comparisons.ipynb`).
 Although, most of the development efforts can be found in the `src` folder.
