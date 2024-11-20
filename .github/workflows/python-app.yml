@@ -37,3 +37,4 @@ jobs:
     - name: Test with pytest
       run: |
         poetry run pytest
+      working-directory: ${{ github.workspace }}
