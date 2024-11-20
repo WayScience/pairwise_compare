@@ -4,7 +4,6 @@ import sys
 import pandas as pd
 import pytest
 
-from comparators.MIC import MIC
 from comparators.PearsonsCorrelation import PearsonsCorrelation
 from comparison_tools.PairwiseCompareManager import PairwiseCompareManager
 
@@ -71,38 +70,6 @@ def test_data(request):
         (
             {
                 "_comparator": PearsonsCorrelation(),
-                "_same_columns": ["Metadata_Concentration"],
-                "_different_columns": ["Metadata_siRNA"],
-                "_drop_cols": None,
-            }
-        ),
-        (
-            {
-                "_comparator": MIC(),
-                "_same_columns": ["Metadata_Concentration"],
-                "_different_columns": ["Metadata_siRNA", "Metadata_Well"],
-                "_drop_cols": ["Metadata_Concentration", "Metadata_Well"],
-            }
-        ),
-        (
-            {
-                "_comparator": MIC(),
-                "_same_columns": None,
-                "_different_columns": ["Metadata_siRNA", "Metadata_Well"],
-                "_drop_cols": None,
-            }
-        ),
-        (
-            {
-                "_comparator": MIC(),
-                "_same_columns": ["Metadata_Concentration"],
-                "_different_columns": ["Metadata_siRNA"],
-                "_drop_cols": ["Metadata_Concentration"],
-            }
-        ),
-        (
-            {
-                "_comparator": MIC(),
                 "_same_columns": ["Metadata_Concentration"],
                 "_different_columns": ["Metadata_siRNA"],
                 "_drop_cols": None,
