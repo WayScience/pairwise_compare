@@ -4,7 +4,7 @@ from itertools import combinations, product
 from typing import Optional
 
 import pandas as pd
-from Comparator import Comparator
+from comparators.Comparator import Comparator
 
 
 class PairwiseCompare:
@@ -20,7 +20,7 @@ class PairwiseCompare:
         _posthoc_group_cols: list[str],
         _feat_cols: list[str],
         _one_different_comparison: bool = False,
-        _drop_cols: Optional[list[str]] = None
+        _drop_cols: Optional[list[str]] = None,
     ):
         """
         Perform Input validation and initializations.
@@ -63,13 +63,17 @@ class PairwiseCompare:
         if _df.empty:
             raise ValueError("DataFrame is empty")
 
-        missing_cols = (set(_antehoc_group_cols) | set(_posthoc_group_cols) | set(_feat_cols)) - set(_df.columns)
+        missing_cols = (
+            set(_antehoc_group_cols) | set(_posthoc_group_cols) | set(_feat_cols)
+        ) - set(_df.columns)
 
         if missing_cols:
             raise ValueError(f"Missing columns {missing_cols}")
 
         if any(not pd.api.types.is_numeric_dtype(_df[col].dtype) for col in _feat_cols):
-            raise TypeError("At least one of the feature columns is not a numerical data type.")
+            raise TypeError(
+                "At least one of the feature columns is not a numerical data type."
+            )
 
         if _df.isna().any().any():
             warnings.warn("DataFrame contains NaNs")
@@ -80,7 +84,6 @@ class PairwiseCompare:
         else:
             self.__is_iterable_with_strings(_drop_cols)
             self.__drop_cols = _drop_cols
-
 
         self.__df = _df
         self.__comparator = _comparator
@@ -103,16 +106,9 @@ class PairwiseCompare:
             _group_cols=self.__posthoc_group_cols,
         )
 
-        print(self.__antehoc_group_cols)
-        print(self.__posthoc_group_cols)
-        print(self.__filtered_antehoc_group_cols)
-        print(self.__filtered_posthoc_group_cols)
-        print(type(self.__filtered_posthoc_group_cols))
-
     def __warn_empty_comparisons(self, _comparison_type_name):
 
         warnings.warn(f"{_comparison_type_name} were empty", UserWarning)
-
 
     def __is_iterable_with_strings(self, _data_structure):
 
@@ -128,15 +124,12 @@ class PairwiseCompare:
             if any(not isinstance(element, str) for element in _data_structure):
                 raise TypeError(f"{prefix_msg} Data in Iterable is not of type String.")
 
-
     def __get_group_fields(self, _group_cols):
         """Get group fields after removing dropped columns."""
 
         return [
-            group_col for group_col in _group_cols
-            if group_col not in self.__drop_cols
+            group_col for group_col in _group_cols if group_col not in self.__drop_cols
         ]
-
 
     def __contains_match(self, _groups):
         """Check if the same features between both groups are the same value."""
@@ -151,7 +144,6 @@ class PairwiseCompare:
                     return True
 
         return False
-
 
     def inter_comparisons(self):
         """
@@ -211,19 +203,19 @@ class PairwiseCompare:
                     ppair0 = (ppair0,)
                     ppair1 = (ppair1,)
 
-                self.__comparator(group0df.get_group(ppair0), group1df.get_group(ppair1))
+                self.__comparator(
+                    group0df.get_group(ppair0), group1df.get_group(ppair1)
+                )
 
                 self.__comparator.save_groups(
                     self.__antehoc_group_cols,
-                    **dict(zip(self.__antehoc_group_names, apair))
+                    **dict(zip(self.__antehoc_group_names, apair)),
                 )
 
                 self.__comparator.save_groups(
                     self.__posthoc_group_cols,
-                    **dict(zip(self.__posthoc_group_names, ppair))
+                    **dict(zip(self.__posthoc_group_names, ppair)),
                 )
-
-
 
     def intra_comparisons(self):
         """
@@ -272,10 +264,10 @@ class PairwiseCompare:
 
                 self.__comparator.save_groups(
                     self.__filtered_antehoc_group_cols,
-                    **dict(zip(self.__antehoc_group_names, (agroup, agroup)))
+                    **dict(zip(self.__antehoc_group_names, (agroup, agroup))),
                 )
 
                 self.__comparator.save_groups(
                     self.__filtered_posthoc_group_cols,
-                    **dict(zip(self.__posthoc_group_names, ppair))
+                    **dict(zip(self.__posthoc_group_names, ppair)),
                 )
