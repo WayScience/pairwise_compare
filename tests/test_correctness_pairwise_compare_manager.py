@@ -12,10 +12,6 @@ data_dir = pathlib.Path(
     "data"
 ).resolve(strict=True)
 
-for file in data_dir.iterdir():
-    if file.is_file():
-        print(file)
-
 plate4df = pd.read_parquet(data_dir / "Plate_4_bulk_feature_selected.parquet")
 
 plate4df["Metadata_siRNA"] = plate4df["Metadata_siRNA"].fillna("No siRNA")
