@@ -1,17 +1,17 @@
-[![Test Pairwise Compare](https://github.com/WayScience/pairwise_compare/actions/workflows/python-app.yml/badge.svg)](https://github.com/WayScience/pairwise_compare/actions/workflows/python-app.yml)
+[![Tests](https://github.com/WayScience/pairwise_compare/actions/workflows/python-app.yml/badge.svg)](https://github.com/WayScience/pairwise_compare/actions/workflows/python-app.yml)
 # Pairwise Compare
-This tool allows the user to compare groups of data specified in a tidy-wide pandas dataframe with ease.<br>
-In this repo the capabilities of the PairwiseCompareManger are shown through examples using a dataset from the [nf1_schwann_cell_painting_data](https://github.com/WayScience/nf1_schwann_cell_painting_data).<br>
-These examples can be found in the [docs](https://github.com/WayScience/pairwise_compare/tree/main/docs).<br>
-Although, most of the development efforts can be found in the `src` folder.<br>
-Users should almost exclusively interact with the [PairwiseCompareManager](https://github.com/WayScience/pairwise_compare/blob/main/src/comparison_tools/PairwiseCompareManager.py), however, there may be rare exceptions.<br>
+This tool allows the user to compare groups of data specified in a [tidy](https://tidyr.tidyverse.org/articles/tidy-data.html) pandas dataframe with ease.
+In this repo the capabilities of the PairwiseCompareManager are shown through examples using a dataset from the [nf1_schwann_cell_painting_data](https://github.com/WayScience/nf1_schwann_cell_painting_data).
+These examples can be found in the [docs](https://github.com/WayScience/pairwise_compare/tree/main/docs).
+Although, most of the development efforts can be found in the `src` folder.
+Users should almost exclusively interact with the [PairwiseCompareManager](https://github.com/WayScience/pairwise_compare/blob/main/src/comparison_tools/PairwiseCompareManager.py), however, there may be rare exceptions.
 If you choose to interact with another component of the tool, then there will be less input validation safeguards available.
 
 ## Data Formats
-When passing arguments to the `PairwiseCompareManager` you can specify the columns that remain the same in each group-to-group comparison, and the columns that will be different in these comparisons.<br>
-These columns are parameterized by `_same_columns` and `_different_columns`, respectively.<br>
-The column values in these columns uniquely define each group.<br>
-During pairwise comparisons of groups, all of the column values of the columns specified in `_same_columns` will be the same between both groups compared for all paired combinations of groups.<br>
+When passing arguments to the `PairwiseCompareManager` you can specify the columns that remain the same in each group-to-group comparison, and the columns that will be different in these comparisons.
+These columns are parameterized by `_same_columns` and `_different_columns`, respectively.
+The column values in these columns uniquely define each group.
+During pairwise comparisons of groups, all of the column values of the columns specified in `_same_columns` will be the same between both groups compared for all paired combinations of groups.
 Likewise, all of the column values of the columns specified in `_different_columns` will be different between both groups compared for all paired combinations of groups.
 
 One of the following column arguments conditions must be satisified when using the `PairwiseCompareManager`:
@@ -26,5 +26,5 @@ One of the following column arguments conditions must be satisified when using t
 4. All of the data, in the supplied pandas dataframe, is used to compute comparisons.
 
 ## Extensibility
-This tool compares features between any two groups of a tidy-wide pandas dataframe.<br>
+This tool compares features between any two groups of a tidy pandas dataframe.
 To incorporate additional comparators for making comparisons, you must introduce the functionality as a class and inherit from the `Comparator` class (See [Comparator.py](https://github.com/WayScience/pairwise_compare/blob/main/src/comparators/Comparator.py) for details).
