@@ -18,7 +18,8 @@ jobs:
 
 
     steps:
-    - uses: actions/checkout@v4
+    - name: Checkout code with submodules
+      uses: actions/checkout@v4
 
     - name: Set up Python
       uses: actions/setup-python@v5
