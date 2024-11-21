@@ -20,8 +20,6 @@ jobs:
     steps:
     - name: Checkout code with submodules
       uses: actions/checkout@v4
-      with:
-        submodules: true
 
     - name: Set up Python
       uses: actions/setup-python@v5

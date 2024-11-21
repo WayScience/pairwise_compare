@@ -9,7 +9,7 @@ from comparison_tools.PairwiseCompareManager import PairwiseCompareManager
 
 # Paths to original nuclear speckle data
 data_dir = pathlib.Path(
-    "data/nf1_schwann_cell_painting_data/3.processing_features/data/bulk_profiles"
+    "data"
 ).resolve(strict=True)
 
 for file in data_dir.iterdir():
