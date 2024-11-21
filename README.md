@@ -1,9 +1,10 @@
+[![Test Pairwise Compare](https://github.com/WayScience/pairwise_compare/actions/workflows/python-app.yml/badge.svg)](https://github.com/WayScience/pairwise_compare/actions/workflows/python-app.yml)
 # Pairwise Compare
 This tool allows the user to compare groups of data specified in a tidy-wide pandas dataframe with ease.
 In this repo the capabilities of the PairwiseCompareManger are shown through examples using a dataset from the [nf1_schwann_cell_painting_data](https://github.com/WayScience/nf1_schwann_cell_painting_data).
 These examples can be found in the docs.
 Although, most of the development efforts can be found in the `src` folder.
-Users should almost exclusively interact with the PairwiseCompareManager, however, there may be rare exceptions.
+Users should almost exclusively interact with the [PairwiseCompareManager](https://github.com/WayScience/pairwise_compare/blob/main/src/comparison_tools/PairwiseCompareManager.py), however, there may be rare exceptions.
 If you choose to interact with another component of the tool, then there will be less input validation safeguards available.
 
 ## Data Formats
@@ -19,11 +20,11 @@ One of the following column arguments conditions must be satisified when using t
 3. `_same_columns` and `_different_columns` should not contain any of the same columns.
 
 ## Limitations
-1. Input validation is enforced in the `PairwiseCompareManager` and `PairwiseCompare` classes.
+1. Input validation is enforced in the `PairwiseCompareManager` and [PairwiseCompare](https://github.com/WayScience/pairwise_compare/blob/main/src/comparison_tools/PairwiseCompare.py) classes.
 2. Additional column values are not tracked aside from columns used to compare groups (_same_columns, _different_columns).
 3. Output and input python data structures are limited.
 4. All of the data, in the supplied pandas dataframe, is used to compute comparisons.
 
 ## Extensibility
 This tool compares features between any two groups of a tidy-wide pandas dataframe.
-To incorporate additional comparators for making comparisons, you must introduce the functionality as a class and inherit from the `Comparator` class (See `Comparator.py` for details).
+To incorporate additional comparators for making comparisons, you must introduce the functionality as a class and inherit from the `Comparator` class (See [Comparator.py](https://github.com/WayScience/pairwise_compare/blob/main/src/comparators/Comparator.py) for details).
