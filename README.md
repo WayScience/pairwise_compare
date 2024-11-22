@@ -11,8 +11,8 @@ If you choose to interact with another component of the tool, then there will be
 You can install this tool with:<br>
 `pip install git+https://github.com/WayScience/pairwise_compare.git`<br>
 <br>
-Note it is highly recommended to use a package manager such as Conda when using this tool.<br>
-Once installed you can tools such as the `PairwiseCompareManager` with:<br>
+Note it is highly recommended to use a package manager such as Conda to install this tool.<br>
+Once installed you can use subtools such as the `PairwiseCompareManager` with:<br>
 `from comparison_tools.PairwiseCompareManager import PairwiseCompareManager`
 
 ## Data Formats
