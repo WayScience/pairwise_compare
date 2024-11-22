@@ -7,6 +7,14 @@ Although, most of the development efforts can be found in the `src` folder.
 Users should almost exclusively interact with the [PairwiseCompareManager](https://github.com/WayScience/pairwise_compare/blob/main/src/comparison_tools/PairwiseCompareManager.py), however, there may be rare exceptions.
 If you choose to interact with another component of the tool, then there will be less input validation safeguards available.
 
+## Installation
+You can install this tool with:<br>
+`pip install git+https://github.com/WayScience/pairwise_compare.git`<br>
+<br>
+Note it is highly recommended to use a package manager such as Conda when using this tool.<br>
+Once installed you can tools such as the `PairwiseCompareManager` with:<br>
+`from comparison_tools.PairwiseCompareManager import PairwiseCompareManager`
+
 ## Data Formats
 When passing arguments to the `PairwiseCompareManager` you can specify the columns that remain the same in each group-to-group comparison, and the columns that will be different in these comparisons.
 These columns are parameterized by `_same_columns` and `_different_columns`, respectively.
