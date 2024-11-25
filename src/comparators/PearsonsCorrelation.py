@@ -25,14 +25,9 @@ class PearsonsCorrelation(Comparator):
 
         for idx, col in enumerate(_group_cols):
             for group_name, group in _groups.items():
-                if len(_group_cols) > 1:
-                    self._comparisons[f"{col}__{group_name}"].extend(
-                        [group[idx]] * comparison_count
-                    )
-                else:
-                    self._comparisons[f"{col}__{group_name}"].extend(
-                        [group] * comparison_count
-                    )
+                self._comparisons[f"{col}__{group_name}"].extend(
+                    [group[idx]] * comparison_count
+                )
 
     @property
     def comparisons(self):
