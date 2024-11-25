@@ -1,9 +1,10 @@
 import warnings
 from collections.abc import Iterable
 from itertools import combinations, product
-from typing import Optional
+from typing import Any, Optional, Union
 
 import pandas as pd
+
 from comparators.Comparator import Comparator
 
 
@@ -98,12 +99,12 @@ class PairwiseCompare:
         self.__antehoc_group_cols = _antehoc_group_cols
         self.__posthoc_group_cols = _posthoc_group_cols
 
-        self.__filtered_antehoc_group_cols = self.__get_group_fields(
-            _group_cols=self.__antehoc_group_cols,
+        self.__filtered_antehoc_col_idx = self.__get_group_column_idxs(
+            _group_columns=self.__antehoc_group_cols,
         )
 
-        self.__filtered_posthoc_group_cols = self.__get_group_fields(
-            _group_cols=self.__posthoc_group_cols,
+        self.__filtered_posthoc_col_idx = self.__get_group_column_idxs(
+            _group_columns=self.__posthoc_group_cols,
         )
 
     def __warn_empty_comparisons(self, _comparison_type_name):
@@ -124,12 +125,25 @@ class PairwiseCompare:
             if any(not isinstance(element, str) for element in _data_structure):
                 raise TypeError(f"{prefix_msg} Data in Iterable is not of type String.")
 
-    def __get_group_fields(self, _group_cols):
+    def __get_group_column_idxs(self, _group_columns):
         """Get group fields after removing dropped columns."""
 
         return [
-            group_col for group_col in _group_cols if group_col not in self.__drop_cols
+            col_idx
+            for col_idx, group_col in enumerate(_group_columns)
+            if group_col in self.__drop_cols
         ]
+
+    def __get_group_column_element(
+        self, _group_column_data: tuple[str], _group_column_idxs: list
+    ):
+        """Get the corresponding group column element from the index"""
+
+        if _group_column_idxs:
+            return tuple(_group_column_data[idx] for idx in _group_column_idxs)
+
+        else:
+            return _group_column_data
 
     def __contains_match(self, _groups):
         """Check if the same features between both groups are the same value."""
@@ -165,13 +179,11 @@ class PairwiseCompare:
             if self.__contains_match(apair):
                 continue
 
-            apair0 = apair[0]
-            apair1 = apair[1]
+            apair = tuple(
+                [(item,) if not isinstance(item, tuple) else item for item in apair[:2]]
+            )
 
-            # Avoids a future deprecation in the pandas get_group method
-            if not isinstance(apair0, tuple) or not isinstance(apair1, tuple):
-                apair0 = (apair0,)
-                apair1 = (apair1,)
+            apair0, apair1 = apair
 
             # Extract the keys for the first post hoc group
             group0df = groupdf.get_group(apair0).copy()
@@ -189,33 +201,59 @@ class PairwiseCompare:
                 self.__warn_empty_comparisons(_comparison_type_name="Inter Comparisons")
                 continue
 
+            if len(self.__filtered_antehoc_col_idx) < len(self.__antehoc_group_cols):
+                filtered_apair = tuple(
+                    self.__get_group_column_element(
+                        apair[group_idx], self.__filtered_antehoc_col_idx
+                    )
+                    for group_idx in range(2)
+                )
+
             # Iterate through each well group cartesian product and save the data
             for ppair in comparison_key_product:
 
                 if self.__contains_match(ppair):
                     continue
 
-                ppair0 = ppair[0]
-                ppair1 = ppair[1]
+                ppair = tuple(
+                    [
+                        (item,) if not isinstance(item, tuple) else item
+                        for item in ppair[:2]
+                    ]
+                )
 
-                # Avoids a future deprecation in the pandas get_group method
-                if not isinstance(ppair0, tuple) or not isinstance(ppair1, tuple):
-                    ppair0 = (ppair0,)
-                    ppair1 = (ppair1,)
+                ppair0, ppair1 = ppair
 
                 self.__comparator(
                     group0df.get_group(ppair0), group1df.get_group(ppair1)
                 )
 
-                self.__comparator.save_groups(
-                    self.__antehoc_group_cols,
-                    **dict(zip(self.__antehoc_group_names, apair)),
-                )
+                if len(self.__filtered_antehoc_col_idx) < len(
+                    self.__antehoc_group_cols
+                ):
+                    self.__comparator.save_groups(
+                        self.__get_group_column_element(
+                            self.__antehoc_group_cols, self.__filtered_antehoc_col_idx
+                        ),
+                        **dict(zip(self.__antehoc_group_names, filtered_apair)),
+                    )
 
-                self.__comparator.save_groups(
-                    self.__posthoc_group_cols,
-                    **dict(zip(self.__posthoc_group_names, ppair)),
-                )
+                if len(self.__filtered_posthoc_col_idx) < len(
+                    self.__posthoc_group_cols
+                ):
+                    filtered_ppair = tuple(
+                        self.__get_group_column_element(
+                            ppair[group_idx], self.__filtered_posthoc_col_idx
+                        )
+                        for group_idx in range(2)
+                    )
+
+                    self.__comparator.save_groups(
+                        self.__get_group_column_element(
+                            self.__posthoc_group_cols, self.__filtered_posthoc_col_idx
+                        ),
+                        **dict(zip(self.__posthoc_group_names, filtered_ppair)),
+                    )
 
     def intra_comparisons(self):
         """
@@ -246,28 +284,56 @@ class PairwiseCompare:
                 self.__warn_empty_comparisons(_comparison_type_name="Intra Comparisons")
                 continue
 
+            if len(self.__filtered_antehoc_col_idx) < len(self.__antehoc_group_cols):
+                filtered_agroup = self.__get_group_column_element(
+                    agroup, self.__filtered_antehoc_col_idx
+                )
+
             # Iterate through the combinations pairs of the groups
             for ppair in comparison_key_combinations:
 
                 if self.__contains_match(ppair):
                     continue
 
-                ppair0 = ppair[0]
-                ppair1 = ppair[1]
+                ppair = tuple(
+                    [
+                        (item,) if not isinstance(item, tuple) else item
+                        for item in ppair[:2]
+                    ]
+                )
 
-                # Avoids a future deprecation in the pandas get_group method
-                if not isinstance(ppair0, tuple) or not isinstance(ppair1, tuple):
-                    ppair0 = (ppair0,)
-                    ppair1 = (ppair1,)
+                ppair0, ppair1 = ppair
 
                 self.__comparator(group.get_group(ppair0), group.get_group(ppair1))
 
-                self.__comparator.save_groups(
-                    self.__filtered_antehoc_group_cols,
-                    **dict(zip(self.__antehoc_group_names, (agroup, agroup))),
-                )
+                if len(self.__filtered_antehoc_col_idx) < len(
+                    self.__antehoc_group_cols
+                ):
+                    self.__comparator.save_groups(
+                        self.__get_group_column_element(
+                            self.__antehoc_group_cols, self.__filtered_antehoc_col_idx
+                        ),
+                        **dict(
+                            zip(
+                                self.__antehoc_group_names,
+                                (filtered_agroup, filtered_agroup),
+                            )
+                        ),
+                    )
 
-                self.__comparator.save_groups(
-                    self.__filtered_posthoc_group_cols,
-                    **dict(zip(self.__posthoc_group_names, ppair)),
-                )
+                if len(self.__filtered_posthoc_col_idx) < len(
+                    self.__posthoc_group_cols
+                ):
+                    filtered_ppair = tuple(
+                        self.__get_group_column_element(
+                            ppair[group_idx], self.__filtered_posthoc_col_idx
+                        )
+                        for group_idx in range(2)
+                    )
+
+                    self.__comparator.save_groups(
+                        self.__get_group_column_element(
+                            self.__posthoc_group_cols, self.__filtered_posthoc_col_idx
+                        ),
+                        **dict(zip(self.__posthoc_group_names, filtered_ppair)),
+                    )
