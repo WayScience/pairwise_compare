@@ -1,5 +1,5 @@
 from collections import defaultdict
-from typing import Optional
+from typing import Optional, Any
 
 import numpy as np
 import pandas as pd
@@ -18,7 +18,7 @@ class PearsonsCorrelation(Comparator):
     def _preprocess_data(self):
         self._group0, self._group1 = self._group0.values, self._group1.values
 
-    def save_groups(self, _group_cols: list[str], **_groups: dict[str, pd.DataFrame]):
+    def save_groups(self, _group_cols: list[str], **_groups: dict[str, tuple[Any, ...]]):
         """Save column values defining comparison groups"""
 
         comparison_count = self._group0.shape[0] * self._group1.shape[0]
