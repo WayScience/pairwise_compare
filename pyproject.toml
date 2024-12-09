@@ -1,9 +1,9 @@
 [tool.poetry]
 name = "pairwise-compare"
 version = "0.1.0"
-description = ""
-authors = ["Your Name <you@example.com>"]
-license = "CC0 1.0 Universal"
+description = "Allows the user to compare groups of data specified in a tidy pandas dataframe with ease."
+authors = ["Cameron Mattson <mattsoncameron1@gmail.com>"]
+license = "CC-BY-4.0"
 readme = "README.md"
 
 packages = [
