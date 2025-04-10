@@ -3,7 +3,7 @@ name = "pairwise-compare"
 version = "0.1.0"
 description = "Allows the user to compare groups of data specified in a tidy pandas dataframe with ease."
 authors = ["Cameron Mattson <mattsoncameron1@gmail.com>"]
-license = "CC-BY-4.0"
+license = "BSD 3-Clause"
 readme = "README.md"
 
 packages = [
