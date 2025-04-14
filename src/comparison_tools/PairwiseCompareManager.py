@@ -34,10 +34,10 @@ class PairwiseCompareManager:
         _feat_cols = list(set(_feat_cols))
 
         if _same_columns:
-            _same_columns = list(set(_same_columns))
+            _same_columns = sorted(set(_same_columns))
 
         if _different_columns:
-            _different_columns = list(set(_different_columns))
+            _different_columns = sorted(set(_different_columns))
 
         if _drop_cols:
             _drop_cols = list(set(_drop_cols))
