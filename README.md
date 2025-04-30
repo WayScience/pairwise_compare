@@ -8,7 +8,8 @@ Users should almost exclusively interact with the [PairwiseCompareManager](https
 If you choose to interact with another component of the tool, then there will be less input validation safeguards available.
 
 ## Installation
-In Python 3.10 and 3.11 you can install this tool with:<br>
+For Python versions 3.10 through 3.12 (inclusive), you can install this tool with either of the following commands:<br>
+`pip install pairwise-compare`<br>
 `pip install git+https://github.com/WayScience/pairwise_compare.git`<br>
 <br>
 Note it is highly recommended to use a package manager such as Conda to install this tool.<br>
