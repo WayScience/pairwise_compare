@@ -55,7 +55,7 @@ def test_data(request):
             {
                 "_comparator": PearsonsCorrelation(),
                 "_same_columns": None,
-                "_different_columns": ["Metadata_siRNA", "Metadata_Well"],
+                "_different_columns": ["Metadata_siRNA", "Metadata_Well", "Metadata_genotype"],
                 "_drop_cols": None,
             }
         ),
