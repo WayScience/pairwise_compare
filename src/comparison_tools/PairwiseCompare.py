@@ -145,11 +145,11 @@ class PairwiseCompare:
         else:
             return _group_column_data
 
-    def __contains_match(self, _groups):
+    def __contains_match(self, _groups, _group_columns):
         """Check if the same features between both groups are the same value."""
 
         if not self.__one_different_comparison:
-            if len(self.__posthoc_group_cols) == 1:
+            if len(_group_columns) == 1:
                 if _groups[0] == _groups[1]:
                     return True
 
@@ -176,7 +176,7 @@ class PairwiseCompare:
         # Iterate through each ante group combination
         for apair in apairs:
 
-            if self.__contains_match(apair):
+            if self.__contains_match(apair, self.__antehoc_group_cols):
                 continue
 
             apair = tuple(
@@ -212,7 +212,7 @@ class PairwiseCompare:
             # Iterate through each well group cartesian product and save the data
             for ppair in comparison_key_product:
 
-                if self.__contains_match(ppair):
+                if self.__contains_match(ppair, self.__posthoc_group_cols):
                     continue
 
                 ppair = tuple(
@@ -292,7 +292,7 @@ class PairwiseCompare:
             # Iterate through the combinations pairs of the groups
             for ppair in comparison_key_combinations:
 
-                if self.__contains_match(ppair):
+                if self.__contains_match(ppair, self.__posthoc_group_cols):
                     continue
 
                 ppair = tuple(
