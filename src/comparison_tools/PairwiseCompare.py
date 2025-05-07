@@ -107,11 +107,11 @@ class PairwiseCompare:
             _group_columns=self.__posthoc_group_cols,
         )
 
-    def __warn_empty_comparisons(self, _comparison_type_name):
+    def __warn_empty_comparisons(self, _comparison_type_name: str):
 
         warnings.warn(f"{_comparison_type_name} were empty", UserWarning)
 
-    def __is_iterable_with_strings(self, _data_structure):
+    def __is_iterable_with_strings(self, _data_structure: Any):
 
         prefix_msg = "Expected an Iterable of Strings."
 
@@ -125,7 +125,7 @@ class PairwiseCompare:
             if any(not isinstance(element, str) for element in _data_structure):
                 raise TypeError(f"{prefix_msg} Data in Iterable is not of type String.")
 
-    def __get_group_column_idxs(self, _group_columns):
+    def __get_group_column_idxs(self, _group_columns: list[str]):
         """Get group fields after removing dropped columns."""
 
         return [
@@ -145,11 +145,15 @@ class PairwiseCompare:
         else:
             return _group_column_data
 
-    def __contains_match(self, _groups):
+    def __contains_match(
+        self,
+        _groups: Union[tuple[tuple[Any]], tuple[Any]],
+        _group_columns: list[str],
+    ):
         """Check if the same features between both groups are the same value."""
 
         if not self.__one_different_comparison:
-            if len(self.__posthoc_group_cols) == 1:
+            if len(_group_columns) == 1:
                 if _groups[0] == _groups[1]:
                     return True
 
@@ -176,7 +180,9 @@ class PairwiseCompare:
         # Iterate through each ante group combination
         for apair in apairs:
 
-            if self.__contains_match(apair):
+            # Don't make a comparison if with this pair if
+            # any of the corresponding column values match
+            if self.__contains_match(apair, self.__antehoc_group_cols):
                 continue
 
             apair = tuple(
@@ -212,7 +218,9 @@ class PairwiseCompare:
             # Iterate through each well group cartesian product and save the data
             for ppair in comparison_key_product:
 
-                if self.__contains_match(ppair):
+                # Don't make a comparison if with this pair if
+                # any of the corresponding column values match
+                if self.__contains_match(ppair, self.__posthoc_group_cols):
                     continue
 
                 ppair = tuple(
@@ -292,7 +300,9 @@ class PairwiseCompare:
             # Iterate through the combinations pairs of the groups
             for ppair in comparison_key_combinations:
 
-                if self.__contains_match(ppair):
+                # Don't make a comparison if with this pair if
+                # any of the corresponding column values match
+                if self.__contains_match(ppair, self.__posthoc_group_cols):
                     continue
 
                 ppair = tuple(
