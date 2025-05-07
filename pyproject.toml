@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "pairwise-compare"
-version = "0.1.2"
+version = "0.0.0"
 description = "Allows the user to compare groups of data specified in a tidy pandas dataframe with ease."
 authors = ["Cameron Mattson <mattsoncameron1@gmail.com>"]
 license = "BSD 3-Clause"
@@ -28,6 +28,15 @@ matplotlib = "^3.9.2"
 pylint = "^3.3.1"
 notebook = "^7.2.2"
 
+[project]
+dynamic = ["version"]
+
+[tool.poetry.requires-plugins]
+poetry-dynamic-versioning = { version = ">=1.0.0,<2.0.0", extras = ["plugin"] }
+
+[tool.poetry-dynamic-versioning]
+enable = true
+
 [build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
+requires = ["poetry-core>=1.0.0", "poetry-dynamic-versioning>=1.0.0,<2.0.0"]
+build-backend = "poetry_dynamic_versioning.backend"
