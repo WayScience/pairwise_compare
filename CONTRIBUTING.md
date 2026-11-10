@@ -35,7 +35,9 @@ The continuous integration installs exactly what the lock file lists (`--locked`
 ## Tests
 Test a change with the small dataframe, and compare results with numpy or with the helpers instead of with numbers copied from the output.
 A new argument or message needs a case in `tests/test_validation.py` or `tests/test_missing_values.py` that checks the message.
-The tests run with coverage (`uv run pytest --cov`), and the lines of the package should stay covered.
+The tests run with coverage (`uv run pytest --cov`), and the lines of the package should stay covered: the checks fail below 100% (`fail_under` in `pyproject.toml`).
+After a merge into `main`, the workflow `tests.yml` uploads the coverage to [Codecov](https://codecov.io/gh/WayScience/pairwise_compare), which the badge of the README shows.
+The upload needs the repository secret `CODECOV_TOKEN`, which an administrator of the organization gets from Codecov after enabling its GitHub app for this repository.
 
 ### Datasets
 Each dataset is a fixture that gives the dataframe and the list of its feature columns together, as in `df, features = small_data`.

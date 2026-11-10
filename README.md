@@ -1,4 +1,5 @@
 [![Tests](https://github.com/WayScience/pairwise_compare/actions/workflows/tests.yml/badge.svg)](https://github.com/WayScience/pairwise_compare/actions/workflows/tests.yml)
+[![codecov](https://codecov.io/gh/WayScience/pairwise_compare/graph/badge.svg)](https://codecov.io/gh/WayScience/pairwise_compare)
 # Pairwise Compare
 Compare the rows of a [tidy](https://www.jstatsoft.org/article/view/v059i10) pandas dataframe in pairs, for example the correlation between the profiles of wells that differ in their cell line.
 You choose which columns must be different and which must be the same between the two rows of a pair, and get one result per pair.

@@ -50,6 +50,8 @@ source = ["pairwise_compare"]
 
 [tool.coverage.report]
 show_missing = true
+# the checks fail when a line of the package is not covered
+fail_under = 100
 
 [tool.mutmut]
 # mutation testing, which is not part of the continuous integration (see CONTRIBUTING.md)

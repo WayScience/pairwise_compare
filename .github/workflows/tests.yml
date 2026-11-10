@@ -32,3 +32,30 @@ jobs:
 
     - name: Test with pytest
       run: uv run --locked pytest --cov
+
+  upload-coverage:
+    # After a merge into main only, because pull requests from forks have no access to the Codecov token.
+    # The token is the repository secret CODECOV_TOKEN (see CONTRIBUTING.md).
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0  # the version comes from the git tags
+        persist-credentials: false  # the job only reads the repository
+
+    - name: Install uv
+      uses: astral-sh/setup-uv@v6
+
+    - name: Test with coverage
+      run: uv run --locked --python 3.12 pytest --cov --cov-report=xml
+
+    - name: Upload the coverage to Codecov
+      uses: codecov/codecov-action@v5
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}
+        files: coverage.xml
+        # set to true when the uploads work, so that a failed upload is noticed
+        fail_ci_if_error: false
