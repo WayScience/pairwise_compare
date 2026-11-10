@@ -1,6 +1,6 @@
 [project]
 name = "pairwise-compare"
-dynamic = ["version"]  # from the latest git tag (hatch-vcs)
+dynamic = ["version"]  # from the latest git tag (setuptools-scm)
 description = "Allows the user to compare groups of data specified in a tidy pandas dataframe with ease."
 readme = "README.md"
 license = "BSD-3-Clause"
@@ -28,14 +28,13 @@ docs = [
 ]
 
 [build-system]
-requires = ["hatchling>=1.27", "hatch-vcs"]
-build-backend = "hatchling.build"
+requires = ["setuptools>=77", "setuptools-scm>=8"]
+build-backend = "setuptools.build_meta"
 
-[tool.hatch.version]
-source = "vcs"
+[tool.setuptools.packages.find]
+where = ["src"]
 
-[tool.hatch.build.targets.wheel]
-packages = ["src/pairwise_compare"]
+[tool.setuptools_scm]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
