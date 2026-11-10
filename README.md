@@ -8,7 +8,7 @@ Users should almost exclusively interact with the [PairwiseCompareManager](https
 If you choose to interact with another component of the tool, then there will be less input validation safeguards available.
 
 ## Installation
-For Python 3.10 or newer, you can install this tool with either of the following commands:<br>
+You can install this tool with either of the following commands:<br>
 `pip install pairwise-compare`<br>
 `uv add pairwise-compare`<br>
 <br>
@@ -18,13 +18,7 @@ and a comparator with, for example:<br>
 `from pairwise_compare.comparators.PearsonsCorrelation import PearsonsCorrelation`
 
 ## Development
-Install the package with its test dependencies and run the tests with [uv](https://docs.astral.sh/uv/):<br>
-`uv sync`<br>
-`uv run pytest`
-
-The version comes from the git tag of the release.
-Release Drafter keeps a draft release with the notes of the merged pull requests (give a pull request the label `release-minor` or `release-major` to raise the version more than a patch).
-To make a release, publish the draft on GitHub, which creates the tag and publishes the package to PyPI (see `.github/workflows/publish.yml`).
+See [CONTRIBUTING.md](CONTRIBUTING.md) for how to run the tests and make a release.
 
 ## Data Formats
 When passing arguments to the `PairwiseCompareManager` you can specify the columns that remain the same in each group-to-group comparison, and the columns that will be different in these comparisons.
