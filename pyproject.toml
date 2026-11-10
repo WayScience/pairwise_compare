@@ -5,7 +5,10 @@ description = "Allows the user to compare groups of data specified in a tidy pan
 readme = "README.md"
 license = "BSD-3-Clause"
 license-files = ["LICENSE"]
-authors = [{ name = "Cameron Mattson", email = "mattsoncameron1@gmail.com" }]
+authors = [
+    { name = "Cameron Mattson", email = "mattsoncameron1@gmail.com" },
+    { name = "Gregory Way" },
+]
 requires-python = ">=3.10"
 dependencies = [
     "pandas>=2.2.3",
