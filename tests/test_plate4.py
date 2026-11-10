@@ -16,6 +16,7 @@ from pairwise_compare import compare_pairs
 )
 def test_pairs_and_values_of_plate4(plate4, plate4_features, different, same, n_pairs):
     # keep only the wells in the results (a dropped column still decides which rows are compared)
+    """Pairs and values of plate4."""
     result = compare_pairs(
         plate4, different=different, features=plate4_features, same=same, drop=[c for c in different + same if c != "Metadata_Well"]
     )

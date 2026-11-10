@@ -21,6 +21,7 @@ class Comparator(ABC):
     """
 
     def __init__(self):
+        """Start with no stored results."""
         self._comparisons = defaultdict(list)
 
     @property

@@ -27,6 +27,7 @@ class PairwiseCompareManager:
         drop: Optional[list[str]] = None,
         comparator: Optional[Comparator] = None,
     ):
+        """Check the arguments and compare the rows (`compare_pairs` describes the parameters)."""
         different = as_column_list("different", different)
         same = as_column_list("same", same)
         drop = as_column_list("drop", drop)

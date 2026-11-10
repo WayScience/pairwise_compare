@@ -10,6 +10,7 @@ from pairwise_compare.comparison_tools.PairwiseCompareManager import PairwiseCom
 
 
 def compare(df, **arguments):
+    """Compare the wells of `df` with the defaults of these tests (different wells of the same plate)."""
     arguments = {"different": ["well"], "features": FEATURES, "same": ["plate"], **arguments}
 
     return compare_pairs(df, **arguments)
@@ -28,6 +29,7 @@ def compare(df, **arguments):
     ],
 )
 def test_compares_the_expected_pairs_once_with_the_right_values(small_df, different, same, n_pairs):
+    """Compares the expected pairs once with the right values."""
     result = compare(small_df, different=different, same=same)
 
     assert len(result) == n_pairs == len(expected_pairs(small_df, different, same or []))
@@ -43,6 +45,7 @@ def test_compares_the_expected_pairs_once_with_the_right_values(small_df, differ
 
 
 def test_columns_of_the_results(small_df):
+    """Columns of the results."""
     result = compare(small_df, different=["well", "line"])
 
     assert list(result.columns) == [
@@ -61,6 +64,7 @@ def test_columns_of_the_results(small_df):
 
 
 def test_columns_follow_the_order_given(small_df):
+    """Columns follow the order given."""
     first = compare(small_df, different=["line", "well"])
     second = compare(small_df, different=["well", "line"])
 
@@ -82,6 +86,7 @@ def test_columns_follow_the_order_given(small_df):
     ],
 )
 def test_dropped_columns_are_left_out_and_the_rest_is_unchanged(small_df, same, drop, kept):
+    """Dropped columns are left out and the rest is unchanged."""
     everything = compare(small_df, different=["line", "well"], same=same)
     result = compare(small_df, different=["line", "well"], same=same, drop=drop)
 
@@ -93,6 +98,7 @@ def test_dropped_columns_are_left_out_and_the_rest_is_unchanged(small_df, same, 
 
 
 def test_integer_groups_work(small_df):
+    """Integer groups work."""
     small_df["plate"] = small_df["plate"].map({"P1": 1, "P2": 2})
     result = compare(small_df)
 
@@ -101,6 +107,7 @@ def test_integer_groups_work(small_df):
 
 
 def test_input_is_not_changed_and_the_order_of_the_rows_does_not_matter(small_df):
+    """Input is not changed and the order of the rows does not matter."""
     before = small_df.copy()
     first = compare(small_df, different=["well", "line"])
     second = compare(small_df.sample(frac=1, random_state=0), different=["well", "line"])
@@ -114,6 +121,7 @@ def test_input_is_not_changed_and_the_order_of_the_rows_does_not_matter(small_df
 
 
 def test_a_new_comparator_is_used_unless_one_is_given(small_df):
+    """A new comparator is used unless one is given."""
     pd.testing.assert_frame_equal(compare(small_df), compare(small_df))
 
     # a comparator that is used again keeps its earlier results
@@ -125,6 +133,7 @@ def test_a_new_comparator_is_used_unless_one_is_given(small_df):
 
 
 def test_manager_gives_the_same_results(small_df):
+    """Manager gives the same results."""
     manager = PairwiseCompareManager(small_df, different=["well"], features=FEATURES, same=["plate"])
 
     pd.testing.assert_frame_equal(manager(), compare(small_df))
@@ -132,6 +141,7 @@ def test_manager_gives_the_same_results(small_df):
 
 def test_engine_compares_outer_groups_that_differ_in_every_outer_column(small_df):
     # used directly, the engine can have several outer columns: (P1, A) is compared with (P2, B) but not with (P2, A)
+    """Engine compares outer groups that differ in every outer column."""
     comparator = PearsonsCorrelation()
     PairwiseCompare(
         small_df, comparator, outer_columns=["plate", "line"], inner_columns=["well"], features=FEATURES

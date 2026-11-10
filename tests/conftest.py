@@ -49,4 +49,5 @@ def plate4() -> pd.DataFrame:
 
 @pytest.fixture(scope="session")
 def plate4_features(plate4) -> list[str]:
+    """The feature columns of the plate 4 data (all columns that are not metadata)."""
     return [column for column in plate4.columns if not column.startswith("Metadata") and column != "well"]

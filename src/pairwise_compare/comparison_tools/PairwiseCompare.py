@@ -107,6 +107,7 @@ class PairwiseCompare:
         drop: Optional[list[str]] = None,
     ):
 
+        """Check the arguments and prepare the groups (the class docstring describes the parameters)."""
         if not isinstance(df, pd.DataFrame):
             raise TypeError("`df` must be a pandas DataFrame.")
 

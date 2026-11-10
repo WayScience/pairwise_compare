@@ -9,6 +9,7 @@ from pairwise_compare.comparison_tools.PairwiseCompare import PairwiseCompare
 
 
 def call(df, **changes):
+    """Call `compare_pairs` with valid arguments, changed by `changes`."""
     return compare_pairs(df, **{"different": ["well"], "features": FEATURES, "same": ["plate"], **changes})
 
 
@@ -47,11 +48,13 @@ def call(df, **changes):
     ],
 )
 def test_mistakes_give_a_clear_error(small_df, changes, error, message):
+    """Mistakes give a clear error."""
     with pytest.raises(error, match=message):
         call(small_df, **changes)
 
 
 def test_the_dataframe_must_be_a_dataframe_with_rows(small_df):
+    """The dataframe must be a dataframe with rows."""
     with pytest.raises(TypeError, match="pandas DataFrame"):
         call([[1, 2]])
 
@@ -60,6 +63,7 @@ def test_the_dataframe_must_be_a_dataframe_with_rows(small_df):
 
 
 def test_tuples_and_repeated_columns_work_like_lists(small_df):
+    """Tuples and repeated columns work like lists."""
     expected = call(small_df)
 
     pd.testing.assert_frame_equal(call(small_df, different=("well",), same=("plate",)), expected)
@@ -69,6 +73,7 @@ def test_tuples_and_repeated_columns_work_like_lists(small_df):
 
 
 def test_the_engine_checks_its_arguments_too(small_df):
+    """The engine checks its arguments too."""
     with pytest.raises(TypeError, match="instance of Comparator"):
         PairwiseCompare(small_df, "pearson", ["plate"], ["well"], ["f1"])
 

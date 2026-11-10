@@ -23,6 +23,7 @@ def run(df, **arguments):
 
 
 def test_no_warning_unless_a_column_that_is_used_has_missing_values(small_df):
+    """No warning unless a column that is used has missing values."""
     _, clean = run(small_df)
 
     small_df["unused"] = np.nan
@@ -33,6 +34,7 @@ def test_no_warning_unless_a_column_that_is_used_has_missing_values(small_df):
 
 @pytest.mark.parametrize("column, arguments", [("line", {"different": ["line"]}), ("plate", {})])
 def test_rows_with_a_missing_group_value_are_left_out_with_a_warning(small_df, column, arguments):
+    """Rows with a missing group value are left out with a warning."""
     small_df.loc[0, column] = np.nan
     result, messages = run(small_df, **arguments)
     without_the_row, _ = run(small_df.drop(index=0), **arguments)
@@ -44,6 +46,7 @@ def test_rows_with_a_missing_group_value_are_left_out_with_a_warning(small_df, c
 
 
 def test_the_warning_names_every_group_column_with_missing_values(small_df):
+    """The warning names every group column with missing values."""
     small_df.loc[0, "line"] = np.nan
     small_df.loc[1, "plate"] = np.nan
     _, messages = run(small_df, different=["well", "line"])
@@ -52,6 +55,7 @@ def test_the_warning_names_every_group_column_with_missing_values(small_df):
 
 
 def test_rows_with_a_missing_feature_value_are_kept_with_missing_results(small_df):
+    """Rows with a missing feature value are kept with missing results."""
     small_df.loc[0, "f2"] = np.nan  # well W1
     result, messages = run(small_df)
 
@@ -71,6 +75,7 @@ def test_rows_with_a_missing_feature_value_are_kept_with_missing_results(small_d
 
 def test_warnings_when_nothing_is_compared(small_df):
     # within a plate: one line per plate, so there is nothing to compare
+    """Warnings when nothing is compared."""
     result, messages = run(small_df[small_df["line"] == "A"], different=["line"])
 
     assert result.empty
@@ -87,6 +92,7 @@ def test_warnings_when_nothing_is_compared(small_df):
 
 def test_warning_when_outer_groups_have_no_inner_groups_to_compare(small_df):
     # every row of line A has a missing well, so line A has no inner groups left
+    """Warning when outer groups have no inner groups to compare."""
     small_df.loc[small_df["line"] == "A", "well"] = np.nan
     result, messages = run(small_df, different=["line", "well"], same=None)
 

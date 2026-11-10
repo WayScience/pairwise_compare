@@ -22,6 +22,7 @@ class PearsonsCorrelation(Comparator):
     """
 
     def __init__(self, name: str = "pearsons_correlation"):
+        """Name the column that holds the correlations."""
         super().__init__()
         self._name = name
         self._n_comparisons = 0
