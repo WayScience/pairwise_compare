@@ -20,9 +20,12 @@ jobs:
       uses: actions/checkout@v4
       with:
         fetch-depth: 0  # the version comes from the git tag of the release
+        persist-credentials: false  # the job does not push to git
 
     - name: Install uv
       uses: astral-sh/setup-uv@v6
+      with:
+        enable-cache: false  # a poisoned cache must not alter the published package
 
     - name: Build the sdist and wheel
       run: uv build
