@@ -50,3 +50,8 @@ source = ["pairwise_compare"]
 
 [tool.coverage.report]
 show_missing = true
+
+[tool.mutmut]
+# mutation testing, which is not part of the continuous integration (see CONTRIBUTING.md)
+source_paths = ["src/pairwise_compare/"]
+also_copy = ["data/", "tests/", "pyproject.toml"]
