@@ -1,0 +1,30 @@
+name: Publish to PyPI
+
+# Push a tag such as v0.2.0 to build the package and publish it to PyPI.
+# This uses PyPI trusted publishing, which needs a trusted publisher for this repository
+# and the workflow `publish.yml` (environment `pypi`) in the PyPI project settings.
+on:
+  push:
+    tags: [ "v*" ]
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      id-token: write  # for trusted publishing
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0  # the version comes from the git tags
+
+    - name: Install uv
+      uses: astral-sh/setup-uv@v6
+
+    - name: Build the sdist and wheel
+      run: uv build
+
+    - name: Publish to PyPI
+      uses: pypa/gh-action-pypi-publish@release/v1

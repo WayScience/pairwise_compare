@@ -3,7 +3,7 @@ from typing import Optional, Any
 
 import numpy as np
 import pandas as pd
-from comparators.Comparator import Comparator
+from pairwise_compare.comparators.Comparator import Comparator
 
 
 class PearsonsCorrelation(Comparator):
