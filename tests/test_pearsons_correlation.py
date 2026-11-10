@@ -35,14 +35,15 @@ def test_perfect_correlations_with_integers_and_a_custom_column_name():
 
 def test_row_without_variance_gives_nan_and_a_warning():
     """Row without variance gives nan and a warning."""
-    group0 = pd.DataFrame([[1.0, 1.0, 1.0], [1.0, 2.0, 3.0]])
+    # the last row is the same value in every feature too, but its mean is not exactly 0.1 (rounding error)
+    group0 = pd.DataFrame([[1.0, 1.0, 1.0], [1.0, 2.0, 3.0], [0.1, 0.1, 0.1]])
     comparator = PearsonsCorrelation()
 
     with pytest.warns(UserWarning, match="same value in every feature"):
         comparator(group0, pd.DataFrame([[3.0, 2.0, 1.0]]))
 
-    first, second = comparator.comparisons["pearsons_correlation"]
-    assert np.isnan(first)
+    first, second, third = comparator.comparisons["pearsons_correlation"]
+    assert np.isnan(first) and np.isnan(third)
     assert second == pytest.approx(-1.0)
 
 

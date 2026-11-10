@@ -36,14 +36,22 @@ class PearsonsCorrelation(Comparator):
 
         centered0 = values0 - values0.mean(axis=1, keepdims=True)
         centered1 = values1 - values1.mean(axis=1, keepdims=True)
-        norms0 = np.linalg.norm(centered0, axis=1, keepdims=True)
-        norms1 = np.linalg.norm(centered1, axis=1, keepdims=True)
 
-        if (norms0 == 0).any() or (norms1 == 0).any():
+        # A row with the same value in every feature has no correlation. It is found from the raw values, because
+        # centering can leave a rounding error (for [0.1, 0.1, 0.1] the mean is 0.10000000000000002).
+        same_value0 = np.ptp(values0, axis=1) == 0
+        same_value1 = np.ptp(values1, axis=1) == 0
+        centered0[same_value0] = 0
+        centered1[same_value1] = 0
+
+        if same_value0.any() or same_value1.any():
             warnings.warn(
                 "A row has the same value in every feature, so its correlations are missing (NaN).",
                 UserWarning,
             )
+
+        norms0 = np.linalg.norm(centered0, axis=1, keepdims=True)
+        norms1 = np.linalg.norm(centered1, axis=1, keepdims=True)
 
         with np.errstate(divide="ignore", invalid="ignore"):
             correlations = np.dot(centered0, centered1.T) / np.dot(norms0, norms1.T)
