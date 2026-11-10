@@ -28,7 +28,7 @@ jobs:
       uses: astral-sh/setup-uv@v6
 
     - name: Install dependencies
-      run: uv sync --python ${{ matrix.python-version }}
+      run: uv sync --locked --python ${{ matrix.python-version }}
 
     - name: Test with pytest
-      run: uv run pytest
+      run: uv run --locked pytest
