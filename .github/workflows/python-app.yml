@@ -31,4 +31,4 @@ jobs:
       run: uv sync --locked --python ${{ matrix.python-version }}
 
     - name: Test with pytest
-      run: uv run --locked pytest
+      run: uv run --locked pytest --cov
