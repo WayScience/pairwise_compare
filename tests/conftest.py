@@ -36,11 +36,6 @@ def small_df() -> pd.DataFrame:
     return df
 
 
-@pytest.fixture
-def small_features() -> list[str]:
-    return ["f1", "f2", "f3"]
-
-
 @pytest.fixture(scope="session")
 def plate4() -> pd.DataFrame:
     """The 60 wells of plate 4 (NF1 Schwann cells, 1,182 columns), with a missing siRNA filled in."""

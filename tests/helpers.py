@@ -5,6 +5,9 @@ from itertools import combinations
 import numpy as np
 import pandas as pd
 
+# the feature columns of the `small_df` fixture
+FEATURES = ["f1", "f2", "f3"]
+
 
 def expected_pairs(df: pd.DataFrame, different: list[str], same: list[str] = ()) -> set[frozenset]:
     """

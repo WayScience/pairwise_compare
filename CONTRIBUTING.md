@@ -22,13 +22,28 @@ The continuous integration installs exactly what the lock file lists (`--locked`
 
 ## Layout
 - `src/pairwise_compare/`: the package.
+  - `compare_pairs` is the function that users call.
+    It is in `comparison_tools/PairwiseCompareManager.py`, where it checks the arguments and starts the comparisons.
+  - `comparison_tools/PairwiseCompare.py` goes through the pairs of groups (the engine).
   - `comparators/` has the comparators (how two groups of rows are compared).
-  - `comparison_tools/` has the code that goes through the pairs of groups.
 - `tests/`: the tests, which run with `pytest`.
+  - `conftest.py` has the test data: a small dataframe with eight wells, and the plate 4 data in `data/`.
+  - `helpers.py` has simple, slow ways to get the answers that the package computes, such as every pair of rows that should be compared.
 - `docs/`: an example notebook.
   Install its extra packages with `uv sync --group docs`.
 
-To add a comparator, inherit from `Comparator` (see the README).
+## Tests
+Test a change with the small dataframe, and compare results with numpy or with the helpers instead of with numbers copied from the output.
+A new argument or message needs a case in `tests/test_validation.py` or `tests/test_missing_values.py` that checks the message.
+The tests run with coverage (`uv run pytest --cov`), and the lines of the package should stay covered.
+
+## Adding a comparator
+A comparator is a class that inherits from `Comparator` (`comparators/Comparator.py`) and has two methods:
+- `__call__(group0, group1)` compares the feature values of two groups of rows and saves the results.
+- `save_groups(group_columns, **groups)` saves the values of the group columns of the two groups.
+
+Users pass an instance of it to the entry point, as in `compare_pairs(df, different=[...], features=[...], comparator=MyComparator())`.
+`tests/test_comparator.py` has a small example.
 
 ## Versions and releases
 The version is not written in any file.
