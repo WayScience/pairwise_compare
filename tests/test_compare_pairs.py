@@ -87,24 +87,35 @@ def test_manager_gives_the_same_results(small_data):
     pd.testing.assert_frame_equal(manager(), compare(df, features))
 
 
-def test_engine_compares_outer_groups_that_differ_in_every_outer_column(small_data):
+def test_engine_compares_outer_groups_that_differ_in_every_outer_column(small_data, monkeypatch):
     """Used directly, the engine can have several outer columns: (P1, A) is compared with (P2, B), not with (P2, A)."""
     df, features = small_data
-    result = PairwiseCompare(
-        df, PearsonsCorrelation(), outer_columns=["plate", "line"], inner_columns=["well"], features=features
-    ).inter_comparisons()
+    engine = PairwiseCompare(df, PearsonsCorrelation(), outer_columns=["plate", "line"], inner_columns=["well"], features=features)
+    result = engine.inter_comparisons()
 
     # 2 pairs of outer groups, with 2 x 2 wells each
     assert len(result) == 8
     assert (result["plate__group0"] != result["plate__group1"]).all()
     assert (result["line__group0"] != result["line__group1"]).all()
 
+    # the pairs are found in blocks of rows, and a block of 2 rows gives the same pairs as one block of all the rows
+    monkeypatch.setattr("pairwise_compare.comparison_tools.PairwiseCompare._PAIR_BLOCK", 16)
+    pd.testing.assert_frame_equal(engine.inter_comparisons(), result)
 
-@pytest.mark.parametrize("size", [3, 2**40], ids=["keys that fit in one number", "keys that are too large for it"])
-def test_pairs_are_sorted_by_the_first_key_then_the_next(size):
+
+@pytest.mark.parametrize(
+    "top_values",
+    [(3, 3), (2**40, 2**40), (2**29 - 1, 2**29 - 1)],
+    ids=["keys that fit in one number", "keys that are too large for it", "keys of exactly 64 bits together"],
+)
+def test_pairs_are_sorted_by_the_first_key_then_the_next(top_values):
     """Pairs are sorted by the first key, then the next, whether or not the keys fit in one number."""
+    # small values with many ties, so that the next key decides, and the largest value gives the size of the key
+    keys = [np.random.default_rng(seed).integers(0, 3, 50) for seed in (0, 1)]
+    for key, top in zip(keys, top_values):
+        key[0] = top
     # the last key (the row) makes every combination of keys different, as in the engine
-    keys = [np.random.default_rng(0).integers(0, size, 50), np.random.default_rng(1).integers(0, size, 50), np.arange(50)]
+    keys.append(np.arange(50))
 
     assert list(_sort_order(keys)) == list(np.lexsort(keys[::-1]))
 
