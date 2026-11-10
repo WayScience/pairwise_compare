@@ -24,13 +24,13 @@ The continuous integration installs exactly what the lock file lists (`--locked`
 - `src/pairwise_compare/`: the package.
   - `compare_pairs` is the function that users call.
     It is in `comparison_tools/PairwiseCompareManager.py`, where it checks the arguments and starts the comparisons.
-  - `comparison_tools/PairwiseCompare.py` goes through the pairs of groups (the engine).
-  - `comparators/` has the comparators (how two groups of rows are compared).
+  - `comparison_tools/PairwiseCompare.py` finds the pairs of rows, puts them in order, and gives them to the comparator (the engine).
+  - `comparators/` has the comparators (how the two rows of each pair are compared).
 - `tests/`: the tests, which run with `pytest`.
   - `conftest.py` has the test data as fixtures (see the datasets below).
-  - `helpers.py` has simple, slow ways to get the answers that the package computes, such as every pair of rows that should be compared.
-- `docs/`: an example notebook.
-  Install its extra packages with `uv sync --group docs`.
+  - `helpers.py` has simple, slow ways to get the answers that the package computes, such as every pair of rows that should be compared, in the order of the results.
+- `docs/`: an example notebook and a speed test notebook.
+  Install their extra packages with `uv sync --group docs`.
 
 ## Tests
 Test a change with the small dataframe, and compare results with numpy or with the helpers instead of with numbers copied from the output.
@@ -50,7 +50,7 @@ To test another real dataset, add a function that returns a `Dataset` to `tests/
 
 ### Property-based test
 One test uses [Hypothesis](https://hypothesis.readthedocs.io/) to make random dataframes (with missing values) and random valid `same`, `different` and `drop` columns.
-It compares every result with the slow checks of `tests/helpers.py` and with numpy.
+It compares every result with the slow checks of `tests/helpers.py` and with numpy, including the order of the pairs and which row of a pair comes first.
 The test runs 100 examples with a fixed seed (`derandomize=True`), so a failure is reproducible, and Hypothesis shows the smallest dataframe that fails.
 
 ### Mutation testing
@@ -69,12 +69,17 @@ The workflow `.github/workflows/mutation.yml` runs it every week (Mondays), and 
 It lists the surviving mutants in the summary of the run and in an artifact, and it does not fail when mutants survive.
 
 ## Adding a comparator
-A comparator is a class that inherits from `Comparator` (`comparators/Comparator.py`) and has two methods:
-- `__call__(group0, group1)` compares the feature values of two groups of rows and saves the results.
-- `save_groups(group_columns, **groups)` saves the values of the group columns of the two groups.
+A comparator is a class that inherits from `Comparator` (`comparators/Comparator.py`).
+Its constructor gives the name of the column of the results, and it has two methods:
+- `prepare(values)` is called once with the feature values of all the compared rows, and returns what `compare` needs.
+  It is optional, and by default it returns the values as they are.
+  Do the work that is the same for every pair here, such as normalizing each row.
+- `compare(prepared, rows0, rows1)` returns one value for each pair of rows `(rows0[k], rows1[k])`.
+  It should compare all the pairs with array operations, and not loop over them.
 
+A comparator keeps no results, so one comparator can be used for any number of calls.
 Users pass an instance of it to the entry point, as in `compare_pairs(df, different=[...], features=[...], comparator=MyComparator())`.
-`tests/test_comparator.py` has a small example.
+`tests/test_comparator.py` has small examples, and `comparators/PearsonsCorrelation.py` is the one that is used by default.
 
 ## Versions and releases
 The version is not written in any file.
