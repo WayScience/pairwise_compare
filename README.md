@@ -141,7 +141,8 @@ All the pairs are found and compared with array operations, so the time grows wi
 The [speed test notebook](docs/speed_test.ipynb) times `compare_pairs` for plates of several sizes, so you can see how long a comparison of your size takes.
 
 The memory use depends on the number of pairs.
-The results table needs memory for every pair, and finding the pairs inside one group of `same` values needs about 80 bytes for every combination of two rows of the group (a group of 6,000 rows peaked at 2.9 GB).
+The results table needs memory for every pair, and finding the pairs inside one group of `same` values needs memory for every combination of two rows of the group.
+Together they peaked at about 80 bytes for every combination of two rows in a test with one group (100 features, a group of 6,000 rows: 18 million pairs, 2.9 GB, 3 seconds), so a group of 20,000 rows would need about 32 GB.
 Add a `same` column that splits very large groups into smaller ones.
 
 ## Citation
