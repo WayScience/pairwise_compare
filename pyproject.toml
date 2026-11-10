@@ -1,47 +1,43 @@
-[tool.poetry]
+[project]
 name = "pairwise-compare"
-version = "0.0.0"
+dynamic = ["version"]  # from the latest git tag (setuptools-scm)
 description = "Allows the user to compare groups of data specified in a tidy pandas dataframe with ease."
-authors = ["Cameron Mattson <mattsoncameron1@gmail.com>"]
-license = "BSD 3-Clause"
 readme = "README.md"
-
-packages = [
-    { include = "comparison_tools", from = "src" },
-    { include = "comparators", from = "src" },
+license = "BSD-3-Clause"
+license-files = ["LICENSE"]
+authors = [
+    { name = "Cameron Mattson", email = "mattsoncameron1@gmail.com" },
+    { name = "Gregory Way", email = "gregory.way@gmail.com" },
+]
+requires-python = ">=3.10"
+dependencies = [
+    "pandas>=2.2.3",
+    "numpy>=2.1.3",
 ]
 
-[tool.poetry.dependencies]
-python = ">=3.10,<3.13"
-pathlib2 = "^2.3.7.post1"
-pandas = "^2.2.3"
-pyarrow = "^18.0.0"
-setuptools = ">=14.0"
-numpy = "^2.1.3"
+[project.urls]
+Homepage = "https://github.com/WayScience/pairwise_compare"
 
-
-[tool.poetry.group.dev.dependencies]
-pytest = "^8.3.3"
-pynvim = "^0.5.1"
-ipython = "^8.29.0"
-matplotlib = "^3.9.2"
-pylint = "^3.3.1"
-notebook = "^7.2.2"
-
-[tool.poetry.requires-plugins]
-poetry-dynamic-versioning = { version = ">=1.0.0,<2.0.0", extras = ["plugin"] }
-
-[tool.poetry-dynamic-versioning]
-enable = true
-style = "pep440"
-vcs = "git"
-
-[tool.poetry-dynamic-versioning.substitution]
-files = [
-    "src/comparison_tools/__init__.py",
-    "src/comparators/__init__.py"
+[dependency-groups]
+# installed by `uv sync`
+dev = [
+    "pytest>=8.3.3",
+    "pyarrow>=18.0.0",  # the tests read a parquet file
+]
+docs = [
+    { include-group = "dev" },
+    "matplotlib>=3.9.2",
+    "notebook>=7.2.2",
 ]
 
 [build-system]
-requires = ["poetry-core>=1.0.0", "poetry-dynamic-versioning>=1.0.0,<2.0.0"]
-build-backend = "poetry_dynamic_versioning.backend"
+requires = ["setuptools>=77", "setuptools-scm>=8"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools_scm]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

@@ -4,8 +4,8 @@ import sys
 import pandas as pd
 import pytest
 
-from comparators.PearsonsCorrelation import PearsonsCorrelation
-from comparison_tools.PairwiseCompareManager import PairwiseCompareManager
+from pairwise_compare.comparators.PearsonsCorrelation import PearsonsCorrelation
+from pairwise_compare.comparison_tools.PairwiseCompareManager import PairwiseCompareManager
 
 # Paths to original nuclear speckle data
 data_dir = pathlib.Path(

@@ -1,9 +1,9 @@
 from typing import Optional
 
 import pandas as pd
-from comparators.Comparator import Comparator
+from pairwise_compare.comparators.Comparator import Comparator
 
-from comparison_tools.PairwiseCompare import PairwiseCompare
+from pairwise_compare.comparison_tools.PairwiseCompare import PairwiseCompare
 
 
 class PairwiseCompareManager:

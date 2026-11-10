@@ -5,7 +5,7 @@ from typing import Any, Optional, Union
 
 import pandas as pd
 
-from comparators.Comparator import Comparator
+from pairwise_compare.comparators.Comparator import Comparator
 
 
 class PairwiseCompare:

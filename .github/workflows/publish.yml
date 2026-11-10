@@ -1,0 +1,34 @@
+name: Publish to PyPI
+
+# Publishes to PyPI when a GitHub release is published (the draft that Release Drafter keeps up to date).
+# This uses PyPI trusted publishing, which needs a trusted publisher for this repository with the
+# workflow `publish.yml` and the environment `release` in the PyPI project settings.
+on:
+  release:
+    types: [published]
+
+jobs:
+  build-and-publish:
+    runs-on: ubuntu-latest
+    environment: release
+    permissions:
+      contents: read
+      id-token: write  # for trusted publishing
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0  # the version comes from the git tag of the release
+        persist-credentials: false  # the job does not push to git
+
+    - name: Install uv
+      uses: astral-sh/setup-uv@v6
+      with:
+        enable-cache: false  # a poisoned cache must not alter the published package
+
+    - name: Build the sdist and wheel
+      run: uv build
+
+    - name: Publish to PyPI
+      uses: pypa/gh-action-pypi-publish@release/v1
