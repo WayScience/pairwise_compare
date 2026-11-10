@@ -3,8 +3,6 @@
 import pandas as pd
 import pytest
 
-from helpers import FEATURES
-
 from pairwise_compare import Comparator, compare_pairs
 
 
@@ -36,11 +34,10 @@ def test_comparisons_property_is_the_stored_results():
     assert dict(comparator.comparisons) == {"mean_difference": [1.0]}
 
 
-def test_another_comparator_can_be_used(small_df):
+def test_another_comparator_can_be_used(small_data):
     """Another comparator can be used."""
-    result = compare_pairs(
-        small_df, different=["line"], features=FEATURES, same=["plate"], comparator=MeanDifference()
-    )
+    df, features = small_data
+    result = compare_pairs(df, different=["line"], features=features, same=["plate"], comparator=MeanDifference())
 
     # the lines A and B of each plate are compared once, with the wells of a line taken together
     assert len(result) == 2

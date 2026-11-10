@@ -2,15 +2,15 @@
 
 import pandas as pd
 import pytest
-from helpers import FEATURES
-
 from pairwise_compare import PearsonsCorrelation, compare_pairs
 from pairwise_compare.comparison_tools.PairwiseCompare import PairwiseCompare
 
 
-def call(df, **changes):
-    """Call `compare_pairs` with valid arguments, changed by `changes`."""
-    return compare_pairs(df, **{"different": ["well"], "features": FEATURES, "same": ["plate"], **changes})
+def call(data, **changes):
+    """Call `compare_pairs` on the dataframe and features of `data` with valid arguments, changed by `changes`."""
+    df, features = data
+
+    return compare_pairs(df, **{"different": ["well"], "features": features, "same": ["plate"], **changes})
 
 
 @pytest.mark.parametrize(
@@ -25,7 +25,7 @@ def call(df, **changes):
         ],
         pytest.param({"different": {"well"}}, TypeError, "list or tuple", id="a set"),
         pytest.param({"different": (c for c in ["well"])}, TypeError, "list or tuple", id="a generator"),
-        pytest.param({"different": 1}, TypeError, "list or tuple", id="a number"),
+        pytest.param({"different": 1}, TypeError, "list or tuple of column names, not int", id="a number"),
         pytest.param({"different": ["well", 3]}, TypeError, "only contain column names", id="a name that is not a string"),
         # which columns, and how many
         pytest.param({"different": []}, ValueError, "`different` must have at least one column", id="no different columns"),
@@ -47,35 +47,41 @@ def call(df, **changes):
         pytest.param({"comparator": PearsonsCorrelation}, TypeError, "instance of Comparator", id="a comparator class"),
     ],
 )
-def test_mistakes_give_a_clear_error(small_df, changes, error, message):
+def test_mistakes_give_a_clear_error(small_data, changes, error, message):
     """Mistakes give a clear error."""
     with pytest.raises(error, match=message):
-        call(small_df, **changes)
+        call(small_data, **changes)
 
 
-def test_the_dataframe_must_be_a_dataframe_with_rows(small_df):
+def test_the_dataframe_must_be_a_dataframe_with_rows(small_data):
     """The dataframe must be a dataframe with rows."""
+    df, features = small_data
     with pytest.raises(TypeError, match="pandas DataFrame"):
-        call([[1, 2]])
+        call(([[1, 2]], features))
 
     with pytest.raises(ValueError, match="empty"):
-        call(small_df.iloc[0:0])
+        call((df.iloc[0:0], features))
 
 
-def test_tuples_and_repeated_columns_work_like_lists(small_df):
+def test_tuples_and_repeated_columns_work_like_lists(small_data):
     """Tuples and repeated columns work like lists."""
-    expected = call(small_df)
+    expected = call(small_data)
 
-    pd.testing.assert_frame_equal(call(small_df, different=("well",), same=("plate",)), expected)
-    pd.testing.assert_frame_equal(
-        call(small_df, different=["well", "well"], features=["f1", "f1", "f2", "f3"]), expected
-    )
+    pd.testing.assert_frame_equal(call(small_data, different=("well",), same=("plate",)), expected)
+    pd.testing.assert_frame_equal(call(small_data, different=["well", "well"], features=small_data[1] * 2), expected)
 
 
-def test_the_engine_checks_its_arguments_too(small_df):
+def test_the_engine_checks_its_arguments_too(small_data):
     """The engine checks its arguments too."""
+    df, features = small_data
     with pytest.raises(TypeError, match="instance of Comparator"):
-        PairwiseCompare(small_df, "pearson", ["plate"], ["well"], ["f1"])
+        PairwiseCompare(df, "pearson", ["plate"], ["well"], ["f1"])
 
     with pytest.raises(ValueError, match="does not have the columns"):
-        PairwiseCompare(small_df, PearsonsCorrelation(), ["plate"], ["nope"], ["f1"])
+        PairwiseCompare(df, PearsonsCorrelation(), ["plate"], ["nope"], ["f1"])
+
+    # a single string instead of a list is named after the argument of the engine
+    for name in ["outer_columns", "inner_columns", "features", "drop"]:
+        arguments = {"outer_columns": ["plate"], "inner_columns": ["well"], "features": ["f1"], "drop": None, name: "plate"}
+        with pytest.raises(TypeError, match=f"`{name}` must be a list of column names"):
+            PairwiseCompare(df, PearsonsCorrelation(), **arguments)

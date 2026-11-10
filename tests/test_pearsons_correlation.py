@@ -34,17 +34,23 @@ def test_perfect_correlations_with_integers_and_a_custom_column_name():
 
 
 def test_row_without_variance_gives_nan_and_a_warning():
-    """Row without variance gives nan and a warning."""
-    # the last row is the same value in every feature too, but its mean is not exactly 0.1 (rounding error)
+    """Rows without variance (in either group) give NaN and a warning, and no other warning."""
+    # the last row of group0 is the same value in every feature too, but its mean is not exactly 0.1 (rounding error)
     group0 = pd.DataFrame([[1.0, 1.0, 1.0], [1.0, 2.0, 3.0], [0.1, 0.1, 0.1]])
+    group1 = pd.DataFrame([[3.0, 2.0, 1.0], [0.1, 0.1, 0.1]])
     comparator = PearsonsCorrelation()
 
-    with pytest.warns(UserWarning, match="same value in every feature"):
-        comparator(group0, pd.DataFrame([[3.0, 2.0, 1.0]]))
+    with pytest.warns(UserWarning, match="same value in every feature") as caught:
+        comparator(group0, group1)
 
-    first, second, third = comparator.comparisons["pearsons_correlation"]
-    assert np.isnan(first) and np.isnan(third)
-    assert second == pytest.approx(-1.0)
+    # one value for each row of group0 with each row of group1: only the second row of group0 with the first of group1
+    assert comparator.comparisons["pearsons_correlation"][2] == pytest.approx(-1.0)
+    assert np.isnan(np.delete(comparator.comparisons["pearsons_correlation"], 2)).all()
+    assert len(caught) == 1
+
+    # a row without variance in only one of the groups gives the warning too
+    with pytest.warns(UserWarning, match="same value in every feature"):
+        PearsonsCorrelation()(pd.DataFrame([[1.0, 2.0, 3.0]]), pd.DataFrame([[2.0, 2.0, 2.0]]))
 
 
 def test_missing_feature_values_give_nan_for_that_row_only():
