@@ -62,7 +62,9 @@ uv run --with mutmut mutmut run
 
 Then list the survivors with `uv run --with mutmut mutmut results`, and see the change of one with `uv run --with mutmut mutmut show <name>`.
 Many survivors are harmless (the wording of a message, or the default warning category), so look for the ones that change a result.
-Mutation testing is not part of the continuous integration, because it is slow and has no pass or fail.
+Mutation testing is not part of the checks of a pull request, because it is slow and has no pass or fail.
+The workflow `.github/workflows/mutation.yml` runs it every week (Mondays), and on demand from the Actions tab.
+It lists the surviving mutants in the summary of the run and in an artifact, and it does not fail when mutants survive.
 
 ## Adding a comparator
 A comparator is a class that inherits from `Comparator` (`comparators/Comparator.py`) and has two methods:

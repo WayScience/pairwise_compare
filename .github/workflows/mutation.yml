@@ -1,0 +1,58 @@
+name: Mutation testing
+
+# Every week (and on demand), change the code in small ways (mutants) and check that the tests notice.
+# It is not part of the pull request checks: it takes a few minutes, and some surviving mutants are harmless
+# (for example, a changed message). The run does not fail when mutants survive.
+# The survivors are listed in the summary of the run and in an artifact.
+on:
+  schedule:
+    - cron: "0 6 * * 1"  # Mondays at 06:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  mutmut:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0  # the version comes from the git tags
+        persist-credentials: false  # the job only reads the repository
+
+    - name: Install uv
+      uses: astral-sh/setup-uv@v6
+
+    - name: Run mutmut
+      # the progress display is long, so the output goes to a file
+      run: uv run --locked --python 3.12 --with mutmut mutmut run --max-children 2 > mutmut-run.log 2>&1
+
+    - name: List the surviving mutants
+      if: ${{ !cancelled() }}
+      run: |
+        uv run --locked --python 3.12 --with mutmut mutmut results > survivors.txt
+        {
+          echo "## Mutation testing"
+          echo
+          echo "Last line of the run (🎉 killed, 🙁 survived, ⏰ timed out, 🤔 suspicious):"
+          echo '```'
+          tail -c 600 mutmut-run.log | tr '\r' '\n' | grep -E "[0-9]+/[0-9]+" | tail -1
+          echo '```'
+          echo "Surviving mutants: $(wc -l < survivors.txt)"
+          echo '```'
+          cat survivors.txt
+          echo '```'
+        } >> "$GITHUB_STEP_SUMMARY"
+
+    - name: Keep the results
+      if: ${{ !cancelled() }}
+      uses: actions/upload-artifact@v4
+      with:
+        name: mutation-testing
+        path: |
+          survivors.txt
+          mutmut-run.log
