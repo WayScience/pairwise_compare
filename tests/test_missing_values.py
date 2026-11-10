@@ -77,18 +77,20 @@ def test_rows_with_a_missing_feature_value_are_kept_with_missing_results(small_d
 
 
 def test_warnings_when_nothing_is_compared(small_data):
-    """Warnings when nothing is compared: within a plate (one line per plate) and between groups (a single line)."""
+    """Warnings when nothing is compared (one line per plate, or a single line), and the results keep their columns."""
     df, features = small_data
     result, messages = run(df[df["line"] == "A"], features, different=["line"])
 
     assert result.empty
-    assert sum("fewer than two inner groups" in message for message in messages) == 2  # one for each plate
-    assert any("The outer group (P1) has fewer" in message for message in messages)
+    assert list(result.columns) == ["pearsons_correlation", "plate__group0", "plate__group1", "line__group0", "line__group1"]
+    assert any("2 of 2 outer groups have fewer than two inner groups, so nothing is compared in them" in m for m in messages)
     assert any("No rows were compared" in message for message in messages)
 
-    # the groups of several columns are described by all their values
+    # only some of the outer groups can be compared (plate P2 has one line left), and the groups of several columns count too
+    _, messages = run(df.drop(index=[6, 7]), features, different=["line"])
+    assert any("1 of 2 outer groups have fewer than two inner groups" in message for message in messages)
     _, messages = run(df.drop_duplicates(["plate", "line"]), features, same=["plate", "line"])
-    assert any("The outer group (P1, A) has fewer" in message for message in messages)
+    assert any("4 of 4 outer groups have fewer than two inner groups" in message for message in messages)
 
     df["line"] = "A"
     result, messages = run(df, features, different=["line", "well"], same=None)
@@ -97,12 +99,24 @@ def test_warnings_when_nothing_is_compared(small_data):
     assert any("No rows were compared" in message for message in messages)
 
 
-def test_warning_when_outer_groups_have_no_inner_groups_to_compare(small_data):
-    """Outer groups without inner groups are skipped with a warning, and the other pairs are still compared."""
+def test_the_other_pairs_are_compared_when_the_rows_of_a_group_have_missing_group_values(small_data):
+    """With a missing well for every row of line A, the rows of A are left out, and the other lines are still compared."""
     df, features = small_data
     df["line"] = ["A", "A", "B", "B", "C", "C", "C", "C"]
-    df.loc[df["line"] == "A", "well"] = np.nan  # line A has no inner groups left
+    df.loc[df["line"] == "A", "well"] = np.nan
     result, messages = run(df, features, different=["line", "well"], same=None)
 
-    assert any("The outer groups (A) and (B) have no inner groups to compare" in message for message in messages)
+    assert any("2 of 8 rows have a missing value in the group columns ['well']" in message for message in messages)
     assert len(result) == 8  # the 2 wells of line B with the 4 wells of line C
+
+
+def test_missing_values_of_pandas_are_read_as_missing_values(small_data):
+    """The missing values of pandas (<NA>) in a feature give missing results for that row, like numpy's nan."""
+    df, features = small_data
+    df["f3"] = df["f3"].mul(10).round().astype("Int64")
+    df.loc[0, "f3"] = pd.NA
+    result, _ = run(df, features)
+
+    with_w1 = (result["well__group0"] == "W1") | (result["well__group1"] == "W1")
+    assert result.loc[with_w1, "pearsons_correlation"].isna().all()
+    assert result.loc[~with_w1, "pearsons_correlation"].notna().all()

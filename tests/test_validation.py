@@ -80,6 +80,9 @@ def test_the_engine_checks_its_arguments_too(small_data):
     with pytest.raises(ValueError, match="does not have the columns"):
         PairwiseCompare(df, PearsonsCorrelation(), ["plate"], ["nope"], ["f1"])
 
+    with pytest.raises(ValueError, match="at least one column"):
+        PairwiseCompare(df, PearsonsCorrelation(), [], ["well"], ["f1"])
+
     # a single string instead of a list is named after the argument of the engine
     for name in ["outer_columns", "inner_columns", "features", "drop"]:
         arguments = {"outer_columns": ["plate"], "inner_columns": ["well"], "features": ["f1"], "drop": None, name: "plate"}
