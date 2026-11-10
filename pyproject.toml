@@ -7,7 +7,7 @@ license = "BSD-3-Clause"
 license-files = ["LICENSE"]
 authors = [
     { name = "Cameron Mattson", email = "mattsoncameron1@gmail.com" },
-    { name = "Gregory Way" },
+    { name = "Gregory Way", email = "gregory.way@gmail.com" },
 ]
 requires-python = ">=3.10"
 dependencies = [
