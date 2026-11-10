@@ -140,6 +140,10 @@ A comparator keeps no results, so the same comparator can be used for any number
 All the pairs are found and compared with array operations, so the time grows with the number of pairs and the number of features, not with a loop over the groups.
 The [speed test notebook](docs/speed_test.ipynb) times `compare_pairs` for plates of several sizes, so you can see how long a comparison of your size takes.
 
+The memory use depends on the number of pairs.
+The results table needs memory for every pair, and finding the pairs inside one group of `same` values needs about 80 bytes for every combination of two rows of the group (a group of 6,000 rows peaked at 2.9 GB).
+Add a `same` column that splits very large groups into smaller ones.
+
 ## Citation
 If you use Pairwise Compare, please cite it with the metadata in [CITATION.cff](CITATION.cff) (the "Cite this repository" button of GitHub uses it).
 The tidy data format is described in:

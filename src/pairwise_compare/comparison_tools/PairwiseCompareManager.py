@@ -129,6 +129,10 @@ def compare_pairs(
     Rows with a missing value in a group column (`same` or `different`) are left out, with a warning.
     Rows with a missing value in a feature column are kept, and their comparisons are missing.
 
+    The results table needs memory for every pair of compared rows. Finding the pairs inside one group of `same`
+    values needs about 80 bytes for every combination of two rows of the group, so split very large groups with
+    another `same` column.
+
     Examples
     --------
     >>> compare_pairs(df, different=["well", "cell_line"], features=feature_columns, same=["plate"])  # doctest: +SKIP
