@@ -1,7 +1,28 @@
-[![Tests](https://github.com/WayScience/pairwise_compare/actions/workflows/python-app.yml/badge.svg)](https://github.com/WayScience/pairwise_compare/actions/workflows/python-app.yml)
+[![Tests](https://github.com/WayScience/pairwise_compare/actions/workflows/tests.yml/badge.svg)](https://github.com/WayScience/pairwise_compare/actions/workflows/tests.yml)
 # Pairwise Compare
-Compare the rows of a [tidy](https://tidyr.tidyverse.org/articles/tidy-data.html) pandas dataframe in pairs, for example the correlation between the profiles of wells that differ in their cell line.
+Compare the rows of a [tidy](https://www.jstatsoft.org/article/view/v059i10) pandas dataframe in pairs, for example the correlation between the profiles of wells that differ in their cell line.
 You choose which columns must be different and which must be the same between the two rows of a pair, and get one result per pair.
+
+**The problem it solves:** as an analyst of image-based profiles, I need the similarity of every pair of samples that differ in one way and match in another (for example, wells of different cell lines on the same plate), so that I can see how replicates agree and how groups differ, because the average of a group hides how its samples relate.
+
+```mermaid
+flowchart LR
+    subgraph U2OS["U2OS (plate P1)"]
+        A1["well A1"]
+        A2["well A2"]
+    end
+    subgraph HeLa["HeLa (plate P1)"]
+        B1["well B1"]
+        B2["well B2"]
+    end
+    A1 ---|"r = 0.90"| B1
+    A2 ---|"r = 0.90"| B1
+    A1 ---|"r = 0.92"| B2
+    A2 ---|"r = 0.92"| B2
+```
+
+Each line is one result: the Pearson correlation `r` of two wells of different cell lines.
+Wells of the same cell line are not compared with each other.
 
 The [example notebook](docs/example_pairwise_comparisons.ipynb) uses a dataset from the [nf1_schwann_cell_painting_data](https://github.com/WayScience/nf1_schwann_cell_painting_data).
 Most of the development is in the `src` folder.
@@ -50,7 +71,7 @@ You can install the package with either of the following commands:<br>
 `uv add pairwise-compare`
 
 ## Data format
-The dataframe is [tidy](https://tidyr.tidyverse.org/articles/tidy-data.html): one row per sample (for example, one well) and one column per variable.
+The dataframe is [tidy](https://www.jstatsoft.org/article/view/v059i10), as described by Wickham (2014): one row per sample (for example, one well) and one column per variable.
 - **Group columns** hold the metadata that define which rows are compared, such as the plate, the cell line, or the well.
   They are the columns listed in `different`, `same` and `drop`.
 - **Feature columns** hold the numbers that are compared, such as measurements of the cell morphology.
@@ -77,6 +98,12 @@ All other columns are ignored.
 - `save_groups(group_columns, **groups)` saves the values of the group columns of the two groups.
 
 A comparator keeps the results of every comparison it has made, so use a new one for each call to `compare_pairs`.
+
+## Citation
+If you use Pairwise Compare, please cite it with the metadata in [CITATION.cff](CITATION.cff) (the "Cite this repository" button of GitHub uses it).
+The tidy data format is described in:
+
+Wickham, H. (2014). [Tidy Data](https://www.jstatsoft.org/article/view/v059i10). *Journal of Statistical Software*, 59(10), 1-23.
 
 ## Development
 See [CONTRIBUTING.md](CONTRIBUTING.md) for how to run the tests and make a release.

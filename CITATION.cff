@@ -1,0 +1,28 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it using the metadata in this file."
+title: "Pairwise Compare"
+type: software
+abstract: "Compare the rows of a tidy pandas dataframe in pairs, such as the Pearson correlation of the profiles of wells that differ in their cell line."
+authors:
+  - family-names: "Mattson"
+    given-names: "Cameron"
+  - family-names: "Way"
+    given-names: "Gregory"
+license: BSD-3-Clause
+repository-code: "https://github.com/WayScience/pairwise_compare"
+keywords:
+  - image-based profiling
+  - pairwise comparison
+  - pandas
+references:
+  - type: article
+    authors:
+      - family-names: "Wickham"
+        given-names: "Hadley"
+    title: "Tidy Data"
+    journal: "Journal of Statistical Software"
+    volume: 59
+    issue: 10
+    year: 2014
+    doi: "10.18637/jss.v059.i10"
+    url: "https://www.jstatsoft.org/article/view/v059i10"
