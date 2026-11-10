@@ -22,13 +22,59 @@ The continuous integration installs exactly what the lock file lists (`--locked`
 
 ## Layout
 - `src/pairwise_compare/`: the package.
+  - `compare_pairs` is the function that users call.
+    It is in `comparison_tools/PairwiseCompareManager.py`, where it checks the arguments and starts the comparisons.
+  - `comparison_tools/PairwiseCompare.py` goes through the pairs of groups (the engine).
   - `comparators/` has the comparators (how two groups of rows are compared).
-  - `comparison_tools/` has the code that goes through the pairs of groups.
 - `tests/`: the tests, which run with `pytest`.
+  - `conftest.py` has the test data as fixtures (see the datasets below).
+  - `helpers.py` has simple, slow ways to get the answers that the package computes, such as every pair of rows that should be compared.
 - `docs/`: an example notebook.
   Install its extra packages with `uv sync --group docs`.
 
-To add a comparator, inherit from `Comparator` (see the README).
+## Tests
+Test a change with the small dataframe, and compare results with numpy or with the helpers instead of with numbers copied from the output.
+A new argument or message needs a case in `tests/test_validation.py` or `tests/test_missing_values.py` that checks the message.
+The tests run with coverage (`uv run pytest --cov`), and the lines of the package should stay covered: the checks fail below 100% (`fail_under` in `pyproject.toml`).
+After a merge into `main`, the workflow `tests.yml` uploads the coverage to [Codecov](https://codecov.io/gh/WayScience/pairwise_compare), which the badge of the README shows.
+The upload needs the repository secret `CODECOV_TOKEN`, which an administrator of the organization gets from Codecov after enabling its GitHub app for this repository.
+
+### Datasets
+Each dataset is a fixture that gives the dataframe and the list of its feature columns together, as in `df, features = small_data`.
+- `small_data` is eight wells with three random features, which are small enough to check by hand.
+- `real_dataset` runs a test on four real datasets in turn: plate 4 of the NF1 Schwann cell painting data, a trimmed plate of the PCCMA bulk profiles, and the first 20 rows of each class of the iris and wine datasets of scikit-learn.
+  Every dataset has a unique `well` column and a few comparisons to make.
+- The files in `data/` are described in `data/README.md`.
+
+To test another real dataset, add a function that returns a `Dataset` to `tests/conftest.py` and list it in `DATASETS`.
+
+### Property-based test
+One test uses [Hypothesis](https://hypothesis.readthedocs.io/) to make random dataframes (with missing values) and random valid `same`, `different` and `drop` columns.
+It compares every result with the slow checks of `tests/helpers.py` and with numpy.
+The test runs 100 examples with a fixed seed (`derandomize=True`), so a failure is reproducible, and Hypothesis shows the smallest dataframe that fails.
+
+### Mutation testing
+Mutation testing changes the code of the package in small ways (for example, `!=` to `==`) and runs the tests for each change.
+A change that no test notices (a surviving mutant) shows a gap in the tests.
+Run it locally, which takes about a minute:
+
+```bash
+uv run --with mutmut mutmut run
+```
+
+Then list the survivors with `uv run --with mutmut mutmut results`, and see the change of one with `uv run --with mutmut mutmut show <name>`.
+Many survivors are harmless (the wording of a message, or the default warning category), so look for the ones that change a result.
+Mutation testing is not part of the checks of a pull request, because it is slow and has no pass or fail.
+The workflow `.github/workflows/mutation.yml` runs it every week (Mondays), and on demand from the Actions tab.
+It lists the surviving mutants in the summary of the run and in an artifact, and it does not fail when mutants survive.
+
+## Adding a comparator
+A comparator is a class that inherits from `Comparator` (`comparators/Comparator.py`) and has two methods:
+- `__call__(group0, group1)` compares the feature values of two groups of rows and saves the results.
+- `save_groups(group_columns, **groups)` saves the values of the group columns of the two groups.
+
+Users pass an instance of it to the entry point, as in `compare_pairs(df, different=[...], features=[...], comparator=MyComparator())`.
+`tests/test_comparator.py` has a small example.
 
 ## Versions and releases
 The version is not written in any file.

@@ -1,43 +1,133 @@
-[![Tests](https://github.com/WayScience/pairwise_compare/actions/workflows/python-app.yml/badge.svg)](https://github.com/WayScience/pairwise_compare/actions/workflows/python-app.yml)
+[![Tests](https://github.com/WayScience/pairwise_compare/actions/workflows/tests.yml/badge.svg)](https://github.com/WayScience/pairwise_compare/actions/workflows/tests.yml)
+[![codecov](https://codecov.io/gh/WayScience/pairwise_compare/graph/badge.svg)](https://codecov.io/gh/WayScience/pairwise_compare)
 # Pairwise Compare
-This tool allows the user to compare groups of data specified in a [tidy](https://tidyr.tidyverse.org/articles/tidy-data.html) pandas dataframe with ease.
-In this repo the capabilities of the PairwiseCompareManager are shown through examples using a dataset from the [nf1_schwann_cell_painting_data](https://github.com/WayScience/nf1_schwann_cell_painting_data).
-These examples can be found in the [docs](https://github.com/WayScience/pairwise_compare/tree/main/docs).
-Although, most of the development efforts can be found in the `src` folder.
-Users should almost exclusively interact with the [PairwiseCompareManager](https://github.com/WayScience/pairwise_compare/blob/main/src/pairwise_compare/comparison_tools/PairwiseCompareManager.py), however, there may be rare exceptions.
-If you choose to interact with another component of the tool, then there will be less input validation safeguards available.
+Compare the rows of a [tidy](https://www.jstatsoft.org/article/view/v059i10) pandas dataframe in pairs, for example the correlation between the profiles of wells that differ in their cell line.
+You choose which columns must be different and which must be the same between the two rows of a pair, and get one result per pair.
+
+**The problem it solves:** as an analyst of image-based profiles, I need the similarity of every pair of samples that differ in one way and match in another (for example, wells of different cell lines on the same plate), so that I can see how replicates agree and how groups differ, because the average of a group hides how its samples relate.
+
+```mermaid
+flowchart LR
+    subgraph U2OS["U2OS (plate P1)"]
+        A1["well A1"]
+        A2["well A2"]
+    end
+    subgraph HeLa["HeLa (plate P1)"]
+        B1["well B1"]
+        B2["well B2"]
+    end
+    A1 -.-|"r = 1.00"| A2
+    B1 -.-|"r = 1.00"| B2
+    A1 ---|"r = 0.90"| B1
+    A2 ---|"r = 0.90"| B1
+    A1 ---|"r = 0.92"| B2
+    A2 ---|"r = 0.92"| B2
+```
+
+Each line is one result: the Pearson correlation `r` of two wells.
+Solid lines join wells of different cell lines, and dashed lines join the replicate wells of one cell line.
+
+The [example notebook](docs/example_pairwise_comparisons.ipynb) uses a dataset from the [nf1_schwann_cell_painting_data](https://github.com/WayScience/nf1_schwann_cell_painting_data).
+Most of the development is in the `src` folder.
+
+## Quick start
+Take four wells of one plate, with the metadata that identify them and four measured features:
+
+```python
+import pandas as pd
+from pairwise_compare import compare_pairs
+
+wells = pd.DataFrame(
+    {
+        "plate": ["P1", "P1", "P1", "P1"],
+        "cell_line": ["U2OS", "U2OS", "HeLa", "HeLa"],
+        "well": ["A1", "A2", "B1", "B2"],
+        "area": [10.0, 11.0, 20.0, 19.0],
+        "intensity": [5.0, 5.5, 2.0, 2.5],
+        "texture": [0.1, 0.3, 0.9, 0.7],
+        "eccentricity": [0.5, 0.4, 0.8, 0.9],
+    }
+)
+
+compare_pairs(
+    wells,
+    different=["cell_line", "well"],  # the two wells of a pair are of different cell lines
+    features=["area", "intensity", "texture", "eccentricity"],
+    same=["plate"],  # and are on the same plate
+)
+```
+
+The result has one row per pair of wells, with their Pearson correlation across the features:
+
+| pearsons_correlation | plate__group0 | plate__group1 | cell_line__group0 | cell_line__group1 | well__group0 | well__group1 |
+| --- | --- | --- | --- | --- | --- | --- |
+| 0.90 | P1 | P1 | HeLa | U2OS | B1 | A1 |
+| 0.90 | P1 | P1 | HeLa | U2OS | B1 | A2 |
+| 0.92 | P1 | P1 | HeLa | U2OS | B2 | A1 |
+| 0.92 | P1 | P1 | HeLa | U2OS | B2 | A2 |
+
+This call compares wells of different cell lines (the solid lines in the picture).
+Wells of the same cell line are not compared with each other.
+
+To compare the replicate wells of each cell line instead (the dashed lines), keep the cell line the same and ask for different wells:
+
+```python
+compare_pairs(
+    wells,
+    different=["well"],  # the two wells of a pair are different wells
+    features=["area", "intensity", "texture", "eccentricity"],
+    same=["plate", "cell_line"],  # of the same cell line on the same plate
+)
+```
+
+| pearsons_correlation | plate__group0 | plate__group1 | cell_line__group0 | cell_line__group1 | well__group0 | well__group1 |
+| --- | --- | --- | --- | --- | --- | --- |
+| 1.00 | P1 | P1 | HeLa | HeLa | B1 | B2 |
+| 1.00 | P1 | P1 | U2OS | U2OS | A1 | A2 |
+
+Each column must either match (`same`) or differ (`different`), so one call gives one kind of pair.
+To get every pair of different wells in one call, use `different=["well"]` and `same=["plate"]`.
+The results only hold the columns you name, so add the cell line to each pair afterwards by looking it up from its well.
 
 ## Installation
-You can install this tool with either of the following commands:<br>
+You can install the package with either of the following commands:<br>
 `pip install pairwise-compare`<br>
-`uv add pairwise-compare`<br>
-<br>
-Once installed you can use subtools such as the `PairwiseCompareManager` with:<br>
-`from pairwise_compare.comparison_tools.PairwiseCompareManager import PairwiseCompareManager`<br>
-and a comparator with, for example:<br>
-`from pairwise_compare.comparators.PearsonsCorrelation import PearsonsCorrelation`
+`uv add pairwise-compare`
+
+## Data format
+The dataframe is [tidy](https://www.jstatsoft.org/article/view/v059i10), as described by Wickham (2014): one row per sample (for example, one well) and one column per variable.
+- **Group columns** hold the metadata that define which rows are compared, such as the plate, the cell line, or the well.
+  They are the columns listed in `different`, `same` and `drop`.
+- **Feature columns** hold the numbers that are compared, such as measurements of the cell morphology.
+  They are listed in `features` and must be numeric.
+
+All other columns are ignored.
+
+## Which rows are compared
+- Two rows are compared when they have a different value in **every** `different` column and, if `same` is given, the same value in **every** `same` column.
+- `different` needs at least two columns, or one column and at least one `same` column. A column cannot be in both.
+- Each pair is compared once: the pair (A, B) is not repeated as (B, A), and a row is not compared with itself.
+- `group0` and `group1` in the output are the two rows of a pair. For a `same` column both have the same value.
+- `drop` leaves columns of `same` or `different` out of the results. They still decide which rows are compared. For example, `drop=["Metadata_Well"]` removes the well columns and keeps the others.
+
+## Missing values
+- A row with a missing value in a `same` or `different` column is **left out** of the comparisons, with a warning that says how many rows and which columns.
+- A row with a missing value in a feature column is kept, and the results of its comparisons are missing (NaN), with a warning.
+- Missing values in other columns are ignored.
+- A row with the same value in every feature has no Pearson correlation (NaN), with a warning.
+
+## Other comparisons
+`compare_pairs` uses the Pearson correlation by default. To compare the rows another way, pass a comparator, which is a class that inherits from `Comparator` (see [Comparator.py](src/pairwise_compare/comparators/Comparator.py) and the example in [test_comparator.py](tests/test_comparator.py)):
+- `__call__(group0, group1)` compares the feature values of two groups of rows and saves the results.
+- `save_groups(group_columns, **groups)` saves the values of the group columns of the two groups.
+
+A comparator keeps the results of every comparison it has made, so use a new one for each call to `compare_pairs`.
+
+## Citation
+If you use Pairwise Compare, please cite it with the metadata in [CITATION.cff](CITATION.cff) (the "Cite this repository" button of GitHub uses it).
+The tidy data format is described in:
+
+Wickham, H. (2014). [Tidy Data](https://www.jstatsoft.org/article/view/v059i10). *Journal of Statistical Software*, 59(10), 1-23.
 
 ## Development
 See [CONTRIBUTING.md](CONTRIBUTING.md) for how to run the tests and make a release.
-
-## Data Formats
-When passing arguments to the `PairwiseCompareManager` you can specify the columns that remain the same in each group-to-group comparison, and the columns that will be different in these comparisons.
-These columns are parameterized by `_same_columns` and `_different_columns`, respectively.
-The column values in these columns uniquely define each group.
-During pairwise comparisons of groups, all of the column values of the columns specified in `_same_columns` will be the same between both groups compared for all paired combinations of groups.
-Likewise, all of the column values of the columns specified in `_different_columns` will be different between both groups compared for all paired combinations of groups.
-
-One of the following column arguments conditions must be satisified when using the `PairwiseCompareManager`:
-1. `_same_columns` must include at least one list element if `_different_columns` has less than two list elements.
-2. `_different_columns` must contain one or more list elements.
-3. `_same_columns` and `_different_columns` should not contain any of the same columns.
-
-## Limitations
-1. Input validation is enforced in the `PairwiseCompareManager` and [PairwiseCompare](https://github.com/WayScience/pairwise_compare/blob/main/src/pairwise_compare/comparison_tools/PairwiseCompare.py) classes.
-2. Additional column values are not tracked aside from columns used to compare groups (_same_columns, _different_columns).
-3. Output and input python data structures are limited.
-4. All of the data, in the supplied pandas dataframe, is used to compute comparisons.
-
-## Extensibility
-This tool compares features between any two groups of a tidy pandas dataframe.
-To incorporate additional comparators for making comparisons, you must introduce the functionality as a class and inherit from the `Comparator` class (See [Comparator.py](https://github.com/WayScience/pairwise_compare/blob/main/src/pairwise_compare/comparators/Comparator.py) for details).
