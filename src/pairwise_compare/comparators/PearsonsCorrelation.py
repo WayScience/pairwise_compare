@@ -1,53 +1,59 @@
-from collections import defaultdict
-from typing import Optional, Any
+"""Pearson's correlation between the rows of two groups."""
+
+import warnings
 
 import numpy as np
 import pandas as pd
+
 from pairwise_compare.comparators.Comparator import Comparator
 
 
 class PearsonsCorrelation(Comparator):
-    """Computes and stores group and Pearsons Correlation data between paired groups."""
+    """
+    Pearson's correlation between every row of one group and every row of another group.
 
-    def __init__(self, _comparison_name: str = "pearsons_correlation"):
+    The correlation of two rows is computed across their features.
+    A row with the same value in every feature has no correlation, so its results are missing (NaN).
 
+    Parameters
+    ----------
+    name:
+        The name of the column with the correlations.
+    """
+
+    def __init__(self, name: str = "pearsons_correlation"):
         super().__init__()
+        self._name = name
+        self._n_comparisons = 0
 
-        self._comparison_name = _comparison_name
+    def __call__(self, group0: pd.DataFrame, group1: pd.DataFrame) -> None:
+        """Save the correlation of each row of `group0` with each row of `group1` (one group0 row after another)."""
 
-    def _preprocess_data(self):
-        self._group0, self._group1 = self._group0.values, self._group1.values
+        values0 = group0.to_numpy(dtype=float, na_value=np.nan)
+        values1 = group1.to_numpy(dtype=float, na_value=np.nan)
+        self._n_comparisons = len(values0) * len(values1)
 
-    def save_groups(self, _group_cols: list[str], **_groups: dict[str, tuple[Any, ...]]):
-        """Save column values defining comparison groups"""
+        centered0 = values0 - values0.mean(axis=1, keepdims=True)
+        centered1 = values1 - values1.mean(axis=1, keepdims=True)
+        norms0 = np.linalg.norm(centered0, axis=1, keepdims=True)
+        norms1 = np.linalg.norm(centered1, axis=1, keepdims=True)
 
-        comparison_count = self._group0.shape[0] * self._group1.shape[0]
+        if (norms0 == 0).any() or (norms1 == 0).any():
+            warnings.warn(
+                "A row has the same value in every feature, so its correlations are missing (NaN).",
+                UserWarning,
+            )
 
-        for idx, col in enumerate(_group_cols):
-            for group_name, group in _groups.items():
-                self._comparisons[f"{col}__{group_name}"].extend(
-                    [group[idx]] * comparison_count
+        with np.errstate(divide="ignore", invalid="ignore"):
+            correlations = np.dot(centered0, centered1.T) / np.dot(norms0, norms1.T)
+
+        self._comparisons[self._name].extend(correlations.ravel().tolist())
+
+    def save_groups(self, group_columns: list[str], **groups: tuple) -> None:
+        """Repeat the group values once for each correlation of the last comparison."""
+
+        for position, column in enumerate(group_columns):
+            for group_name, group_values in groups.items():
+                self._comparisons[f"{column}__{group_name}"].extend(
+                    [group_values[position]] * self._n_comparisons
                 )
-
-    @property
-    def comparisons(self):
-        return self._comparisons
-
-    def __call__(self, _group0: pd.DataFrame, _group1: pd.DataFrame):
-
-        self._group0, self._group1 = _group0, _group1
-        self._preprocess_data()
-
-        group0_centered = self._group0 - self._group0.mean(axis=1, keepdims=True)
-        group1_centered = self._group1 - self._group1.mean(axis=1, keepdims=True)
-
-        dot_products = np.dot(group0_centered, group1_centered.T)
-
-        group0_norms = np.linalg.norm(group0_centered, axis=1, keepdims=True)
-        group1_norms = np.linalg.norm(group1_centered, axis=1, keepdims=True)
-
-        norm_products = np.dot(group0_norms, group1_norms.T)
-
-        correlations = (dot_products / norm_products).flatten()
-
-        self._comparisons[self._comparison_name].extend(correlations.tolist())
