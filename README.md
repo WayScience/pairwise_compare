@@ -22,8 +22,9 @@ Install the package with its test dependencies and run the tests with [uv](https
 `uv sync`<br>
 `uv run pytest`
 
-The version comes from the latest git tag.
-To make a release, push a tag such as `v0.2.0`, which builds the package and publishes it to PyPI (see `.github/workflows/publish.yml`).
+The version comes from the git tag of the release.
+Release Drafter keeps a draft release with the notes of the merged pull requests (give a pull request the label `release-minor` or `release-major` to raise the version more than a patch).
+To make a release, publish the draft on GitHub, which creates the tag and publishes the package to PyPI (see `.github/workflows/publish.yml`).
 
 ## Data Formats
 When passing arguments to the `PairwiseCompareManager` you can specify the columns that remain the same in each group-to-group comparison, and the columns that will be different in these comparisons.

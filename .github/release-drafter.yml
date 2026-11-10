@@ -1,0 +1,21 @@
+# Template of the draft release (see https://github.com/release-drafter/release-drafter).
+# The next version is the latest release plus a patch increment, unless a merged pull request has one of the
+# labels below (a pull request that breaks the imports, for example, gets `release-minor`).
+name-template: "v$RESOLVED_VERSION"
+tag-template: "v$RESOLVED_VERSION"
+version-resolver:
+  major:
+    labels:
+      - "release-major"
+  minor:
+    labels:
+      - "release-minor"
+  patch:
+    labels:
+      - "release-patch"
+  default: patch
+change-template: "- $TITLE (#$NUMBER)"
+template: |
+  ## Changes
+
+  $CHANGES
