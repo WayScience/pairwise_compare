@@ -15,14 +15,16 @@ flowchart LR
         B1["well B1"]
         B2["well B2"]
     end
+    A1 -.-|"r = 1.00"| A2
+    B1 -.-|"r = 1.00"| B2
     A1 ---|"r = 0.90"| B1
     A2 ---|"r = 0.90"| B1
     A1 ---|"r = 0.92"| B2
     A2 ---|"r = 0.92"| B2
 ```
 
-Each line is one result: the Pearson correlation `r` of two wells of different cell lines.
-Wells of the same cell line are not compared with each other.
+Each line is one result: the Pearson correlation `r` of two wells.
+Solid lines join wells of different cell lines, and dashed lines join the replicate wells of one cell line.
 
 The [example notebook](docs/example_pairwise_comparisons.ipynb) uses a dataset from the [nf1_schwann_cell_painting_data](https://github.com/WayScience/nf1_schwann_cell_painting_data).
 Most of the development is in the `src` folder.
@@ -63,7 +65,28 @@ The result has one row per pair of wells, with their Pearson correlation across 
 | 0.92 | P1 | P1 | HeLa | U2OS | B2 | A1 |
 | 0.92 | P1 | P1 | HeLa | U2OS | B2 | A2 |
 
-Each well of one cell line is compared with each well of the other, and wells of the same cell line are not compared with each other.
+This call compares wells of different cell lines (the solid lines in the picture).
+Wells of the same cell line are not compared with each other.
+
+To compare the replicate wells of each cell line instead (the dashed lines), keep the cell line the same and ask for different wells:
+
+```python
+compare_pairs(
+    wells,
+    different=["well"],  # the two wells of a pair are different wells
+    features=["area", "intensity", "texture", "eccentricity"],
+    same=["plate", "cell_line"],  # of the same cell line on the same plate
+)
+```
+
+| pearsons_correlation | plate__group0 | plate__group1 | cell_line__group0 | cell_line__group1 | well__group0 | well__group1 |
+| --- | --- | --- | --- | --- | --- | --- |
+| 1.00 | P1 | P1 | HeLa | HeLa | B1 | B2 |
+| 1.00 | P1 | P1 | U2OS | U2OS | A1 | A2 |
+
+Each column must either match (`same`) or differ (`different`), so one call gives one kind of pair.
+To get every pair of different wells in one call, use `different=["well"]` and `same=["plate"]`.
+The results only hold the columns you name, so add the cell line to each pair afterwards by looking it up from its well.
 
 ## Installation
 You can install the package with either of the following commands:<br>
