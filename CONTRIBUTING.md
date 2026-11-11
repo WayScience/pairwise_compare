@@ -68,6 +68,19 @@ Mutation testing is not part of the checks of a pull request, because it is slow
 The workflow `.github/workflows/mutation.yml` runs it every week (Mondays), and on demand from the Actions tab.
 It lists the surviving mutants in the summary of the run and in an artifact, and it does not fail when mutants survive.
 
+### Benchmarks
+`tests/test_benchmarks.py` times `compare_pairs` on 3,600 wells with 1,000 features (replicates, and wells of different cell lines) with [pytest-benchmark](https://pytest-benchmark.readthedocs.io/).
+The normal test runs skip them (`--benchmark-skip` in `pyproject.toml`), so they do not slow down the checks.
+Run them with:
+
+```bash
+uv run pytest -o addopts= --benchmark-only
+```
+
+After a merge into `main` (and on demand from the Actions tab), the workflow `.github/workflows/benchmark.yml` runs them and compares the times with the previous run using [github-action-benchmark](https://github.com/benchmark-action/github-action-benchmark).
+The times of a shared runner vary, so a run that is more than twice as slow only shows an alert in the summary of the run and does not fail it.
+`docs/speed_test.ipynb` shows the speed for other sizes.
+
 ## Adding a comparator
 A comparator is a class that inherits from `Comparator` (`comparators/Comparator.py`).
 Its constructor gives the name of the column of the results, and it has two methods:
