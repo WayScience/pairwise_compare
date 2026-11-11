@@ -1,19 +1,17 @@
 """Tests of which rows are compared, the values, and the columns of the results, on small and real datasets."""
 
 import warnings
-from collections import defaultdict
-from itertools import combinations
 
 import numpy as np
 import pandas as pd
 import pytest
-from helpers import expected_pairs, numpy_correlations, result_pairs
+from helpers import expected_order, numpy_correlations
 from hypothesis import HealthCheck, assume, given, settings
 from hypothesis import strategies as st
 from hypothesis.extra.numpy import arrays
 
 from pairwise_compare import PearsonsCorrelation, compare_pairs
-from pairwise_compare.comparison_tools.PairwiseCompare import PairwiseCompare
+from pairwise_compare.comparison_tools.PairwiseCompare import PairwiseCompare, _sort_order
 from pairwise_compare.comparison_tools.PairwiseCompareManager import PairwiseCompareManager
 
 
@@ -24,17 +22,21 @@ def compare(df, features, **arguments):
     return compare_pairs(df, **arguments)
 
 
-def test_real_datasets_give_the_pairs_and_the_correlations_of_the_slow_checks(real_dataset):
-    """Real datasets (NF1 plate 4, a PCCMA plate, iris, wine) give the pairs of the oracle and the correlations of numpy."""
+def test_real_datasets_give_the_pairs_order_labels_and_correlations_of_the_slow_checks(real_dataset):
+    """Real datasets (NF1 plate 4, a PCCMA plate, iris, wine) give the pairs of the oracle, in its order, with numpy's correlations."""
     df, features, comparisons = real_dataset
+    correlations = np.corrcoef(df[features].to_numpy(dtype=float))
 
     for same, different in comparisons:
+        rows0, rows1 = expected_order(df, different, same)
         result = compare_pairs(df, different=different, features=features, same=same)
 
-        assert len(result) > 0
-        assert len(result_pairs(result)) == len(result), "a pair was compared more than once"
-        assert result_pairs(result) == expected_pairs(df, different, same)
-        assert result["pearsons_correlation"].to_numpy() == pytest.approx(numpy_correlations(df, features, result), abs=1e-9)
+        assert len(result) == len(rows0) > 0
+        # which row is first, and the order of the pairs, as well as the pairs themselves
+        for column in same + different:
+            assert list(result[f"{column}__group0"]) == list(df[column].iloc[rows0])
+            assert list(result[f"{column}__group1"]) == list(df[column].iloc[rows1])
+        assert result["pearsons_correlation"].to_numpy() == pytest.approx(correlations[rows0, rows1], abs=1e-9)
 
 
 def test_columns_of_the_results(small_data):
@@ -58,30 +60,23 @@ def test_columns_of_the_results(small_data):
 
 
 def test_input_is_not_changed_and_the_order_of_the_rows_does_not_matter(small_data):
-    """The dataframe is not changed, and shuffling its rows gives the same pairs."""
+    """The dataframe is not changed, and shuffling its rows gives the same results in the same order."""
     df, features = small_data
     before = df.copy()
     first = compare(df, features, different=["well", "line"])
     second = compare(df.sample(frac=1, random_state=0), features, different=["well", "line"])
 
     pd.testing.assert_frame_equal(df, before)
-
-    key = ["well__group0", "well__group1"]
-    pd.testing.assert_frame_equal(
-        first.sort_values(key).reset_index(drop=True), second.sort_values(key).reset_index(drop=True)
-    )
+    pd.testing.assert_frame_equal(first, second)
 
 
-def test_a_new_comparator_is_used_unless_one_is_given(small_data):
-    """Each call starts with a new comparator, and a comparator that is used again keeps its earlier results."""
+def test_a_comparator_can_be_used_again(small_data):
+    """A comparator keeps no results, so using it again gives the same results as a new one."""
     df, features = small_data
-    pd.testing.assert_frame_equal(compare(df, features), compare(df, features))
-
     comparator = PearsonsCorrelation()
-    for _ in range(2):
-        result = compare(df, features, comparator=comparator)
 
-    assert len(result) == 2 * 12
+    pd.testing.assert_frame_equal(compare(df, features, comparator=comparator), compare(df, features, comparator=comparator))
+    pd.testing.assert_frame_equal(compare(df, features), compare(df, features, comparator=comparator))
 
 
 def test_manager_gives_the_same_results(small_data):
@@ -92,19 +87,37 @@ def test_manager_gives_the_same_results(small_data):
     pd.testing.assert_frame_equal(manager(), compare(df, features))
 
 
-def test_engine_compares_outer_groups_that_differ_in_every_outer_column(small_data):
-    """Used directly, the engine can have several outer columns: (P1, A) is compared with (P2, B) but not with (P2, A)."""
+def test_engine_compares_outer_groups_that_differ_in_every_outer_column(small_data, monkeypatch):
+    """Used directly, the engine can have several outer columns: (P1, A) is compared with (P2, B), not with (P2, A)."""
     df, features = small_data
-    comparator = PearsonsCorrelation()
-    PairwiseCompare(
-        df, comparator, outer_columns=["plate", "line"], inner_columns=["well"], features=features
-    ).inter_comparisons()
-    result = pd.DataFrame(comparator.comparisons)
+    engine = PairwiseCompare(df, PearsonsCorrelation(), outer_columns=["plate", "line"], inner_columns=["well"], features=features)
+    result = engine.inter_comparisons()
 
     # 2 pairs of outer groups, with 2 x 2 wells each
     assert len(result) == 8
     assert (result["plate__group0"] != result["plate__group1"]).all()
     assert (result["line__group0"] != result["line__group1"]).all()
+
+    # the pairs are found in blocks of rows, and a block of 2 rows gives the same pairs as one block of all the rows
+    monkeypatch.setattr("pairwise_compare.comparison_tools.PairwiseCompare._PAIR_BLOCK", 16)
+    pd.testing.assert_frame_equal(engine.inter_comparisons(), result)
+
+
+@pytest.mark.parametrize(
+    "top_values",
+    [(3, 3), (2**40, 2**40), (2**29 - 1, 2**29 - 1)],
+    ids=["keys that fit in one number", "keys that are too large for it", "keys of exactly 64 bits together"],
+)
+def test_pairs_are_sorted_by_the_first_key_then_the_next(top_values):
+    """Pairs are sorted by the first key, then the next, whether or not the keys fit in one number."""
+    # small values with many ties, so that the next key decides, and the largest value gives the size of the key
+    keys = [np.random.default_rng(seed).integers(0, 3, 50) for seed in (0, 1)]
+    for key, top in zip(keys, top_values):
+        key[0] = top
+    # the last key (the row) makes every combination of keys different, as in the engine
+    keys.append(np.arange(50))
+
+    assert list(_sort_order(keys)) == list(np.lexsort(keys[::-1]))
 
 
 @st.composite
@@ -145,8 +158,8 @@ def pearson_of_rows(first, second):
 
 @settings(max_examples=100, deadline=None, derandomize=True, suppress_health_check=[HealthCheck.function_scoped_fixture])
 @given(case=comparison_cases())
-def test_any_valid_comparison_gives_the_pairs_and_correlations_of_the_slow_checks(case):
-    """Random dataframes and arguments: every pair that the rules allow is compared once, with numpy's correlation."""
+def test_any_valid_comparison_gives_the_pairs_order_and_correlations_of_the_slow_checks(case):
+    """Random dataframes and arguments: the pairs the rules allow are compared once, in the expected order, with numpy's correlation."""
     df, features, same, different, drop = case
     used = same + different
     kept = [column for column in used if column not in drop]
@@ -157,22 +170,40 @@ def test_any_valid_comparison_gives_the_pairs_and_correlations_of_the_slow_check
 
     # the slow way: every pair of rows without a missing group value, tested one by one
     valid = df.dropna(subset=used)
-    columns = {column: valid[column].to_numpy() for column in used}
+    rows0, rows1 = expected_order(valid, different, same)
     values = valid[features].to_numpy()
-    expected = defaultdict(list)
-    for first, second in combinations(range(len(valid)), 2):
-        if all(columns[c][first] != columns[c][second] for c in different) and all(columns[c][first] == columns[c][second] for c in same):
-            labels = tuple(sorted(tuple(str(valid[c].iloc[row]) for c in kept) for row in (first, second)))
-            expected[labels].append(pearson_of_rows(values[first], values[second]))
+    expected = [pearson_of_rows(values[first], values[second]) for first, second in zip(rows0, rows1)]
 
-    found = defaultdict(list)
-    for row in result.to_dict("records"):
-        labels = tuple(sorted(tuple(str(row[f"{c}__group{group}"]) for c in kept) for group in (0, 1)))
-        found[labels].append(row["pearsons_correlation"])
+    assert len(result) == len(rows0)
+    for column in kept:
+        assert list(result[f"{column}__group0"]) == list(valid[column].iloc[rows0])
+        assert list(result[f"{column}__group1"]) == list(valid[column].iloc[rows1])
+    np.testing.assert_allclose(result["pearsons_correlation"].to_numpy(), expected, atol=1e-9, equal_nan=True)
+    # also when nothing is compared, the results have their columns
+    assert list(result.columns) == ["pearsons_correlation"] + [f"{c}__group{g}" for c in kept for g in (0, 1)]
 
-    assert found.keys() == expected.keys()
-    for labels in expected:
-        np.testing.assert_allclose(np.sort(found[labels]), np.sort(expected[labels]), atol=1e-9, equal_nan=True)
 
-    if len(result) > 0:
-        assert list(result.columns) == ["pearsons_correlation"] + [f"{c}__group{g}" for c in kept for g in (0, 1)]
+def test_the_helpers_give_answers_that_are_worked_out_by_hand():
+    """The oracle of the pairs and the numpy correlations are checked on rows with answers that are worked out by hand."""
+    # without `same` columns, rows 0 to 3 pair up when both a and b differ: (0, 1), (0, 3), (1, 2) and (2, 3).
+    # The first row of a pair has the smaller (a, b), so (1, 2) is (2, 1), and the pairs are sorted by the `a` of both
+    # rows before the `b` of either: sorting by the whole first row would put (0, 1) before (2, 3).
+    df = pd.DataFrame({"a": [1, 3, 1, 2], "b": [2, 1, 3, 1], "well": ["W0", "W1", "W2", "W3"], "x": [1.0, 2, 3, 4], "y": [2.0, 1, 4, 3]})
+    rows0, rows1 = expected_order(df, ["a", "b"])
+    assert (rows0.tolist(), rows1.tolist()) == ([0, 2, 0, 2], [3, 3, 1, 1])
+
+    result = compare_pairs(df, different=["a", "b"], features=["x", "y"])
+    assert [result[f"{column}__group{group}"].tolist() for group in (0, 1) for column in "ab"] == [
+        [1, 1, 1, 1], [2, 3, 2, 3], [2, 2, 3, 3], [1, 1, 1, 1],  # a and b of the first rows, then of the second rows
+    ]
+
+    # with `same` columns, each group g is ordered by the values of w, and the groups follow each other
+    df = pd.DataFrame({"g": [1, 1, 1, 2, 2], "w": [3, 1, 2, 5, 4]})
+    rows0, rows1 = expected_order(df, ["w"], ["g"])
+    assert (rows0.tolist(), rows1.tolist()) == ([1, 1, 2, 4], [2, 0, 0, 3])
+
+    # the wells are (1, 2, 3), (2, 4, 6) and (3, 2, 1) in their three features: W0 and W1 go up together (correlation 1),
+    # and W2 goes the other way compared with both (correlation -1)
+    wells = pd.DataFrame({"well": ["W0", "W1", "W2"], "f1": [1.0, 2, 3], "f2": [2.0, 4, 2], "f3": [3.0, 6, 1]})
+    pairs = pd.DataFrame({"well__group0": ["W0", "W0", "W1"], "well__group1": ["W1", "W2", "W2"]})
+    assert numpy_correlations(wells, ["f1", "f2", "f3"], pairs) == pytest.approx([1.0, -1.0, -1.0], abs=1e-12)

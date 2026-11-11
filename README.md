@@ -105,10 +105,14 @@ All other columns are ignored.
 
 ## Which rows are compared
 - Two rows are compared when they have a different value in **every** `different` column and, if `same` is given, the same value in **every** `same` column.
-- `different` needs at least two columns, or one column and at least one `same` column. A column cannot be in both.
+- `different` needs at least two columns, or one column and at least one `same` column.
+  A column cannot be in both.
 - Each pair is compared once: the pair (A, B) is not repeated as (B, A), and a row is not compared with itself.
-- `group0` and `group1` in the output are the two rows of a pair. For a `same` column both have the same value.
-- `drop` leaves columns of `same` or `different` out of the results. They still decide which rows are compared. For example, `drop=["Metadata_Well"]` removes the well columns and keeps the others.
+- `group0` and `group1` in the output are the two rows of a pair.
+  For a `same` column both have the same value.
+- `drop` leaves columns of `same` or `different` out of the results.
+  They still decide which rows are compared.
+  For example, `drop=["Metadata_Well"]` removes the well columns and keeps the others.
 
 ## Missing values
 - A row with a missing value in a `same` or `different` column is **left out** of the comparisons, with a warning that says how many rows and which columns.
@@ -116,12 +120,33 @@ All other columns are ignored.
 - Missing values in other columns are ignored.
 - A row with the same value in every feature has no Pearson correlation (NaN), with a warning.
 
-## Other comparisons
-`compare_pairs` uses the Pearson correlation by default. To compare the rows another way, pass a comparator, which is a class that inherits from `Comparator` (see [Comparator.py](src/pairwise_compare/comparators/Comparator.py) and the example in [test_comparator.py](tests/test_comparator.py)):
-- `__call__(group0, group1)` compares the feature values of two groups of rows and saves the results.
-- `save_groups(group_columns, **groups)` saves the values of the group columns of the two groups.
+## Order of the results
+- The first row of a pair (`group0`) is the one that comes first by its values in the group columns, and the second row (`group1`) comes after it.
+  With `same` columns, rows are first compared by their `same` values, and then by their `different` values, column by column.
+  Without `same` columns, rows are compared by the first `different` column, and then by the other ones.
+- The pairs are sorted by these keys, in this order:
+  1. the `same` columns (both rows of a pair have the same values in them), or, without `same` columns, the first `different` column of `group0` and then of `group1`;
+  2. the `different` columns of `group0` (the other ones without `same` columns) and then those of `group1`;
+  3. the position in the dataframe of `group0` and then of `group1`.
 
-A comparator keeps the results of every comparison it has made, so use a new one for each call to `compare_pairs`.
+## Other comparisons
+`compare_pairs` uses the Pearson correlation by default.
+To compare the rows another way, pass a comparator, which is a class that inherits from `Comparator` (see [Comparator.py](src/pairwise_compare/comparators/Comparator.py) and the examples in [test_comparator.py](tests/test_comparator.py)).
+A comparator has a name, which is the name of its column in the results, and two methods:
+- `prepare(values)` is called once with the feature values of all the compared rows (a numpy array with one row per sample), and returns whatever `compare` needs.
+  By default, it returns the values as they are.
+- `compare(prepared, rows0, rows1)` returns one value for each pair of rows `(rows0[k], rows1[k])`, as a numpy array.
+
+A comparator keeps no results, so the same comparator can be used for any number of calls to `compare_pairs`.
+
+## Speed
+All the pairs are found and compared with array operations, so the time grows with the number of pairs and the number of features, not with a loop over the groups.
+The [speed test notebook](docs/speed_test.ipynb) times `compare_pairs` for plates of several sizes, so you can see how long a comparison of your size takes.
+
+The memory use depends on the number of pairs.
+The results table needs memory for every pair, and finding the pairs inside one group of `same` values needs memory for every combination of two rows of the group.
+Together they peaked at about 80 bytes for every combination of two rows in a test with one group (100 features, a group of 6,000 rows: 18 million pairs, 2.9 GB, 3 seconds), so a group of 20,000 rows would need about 32 GB.
+Add a `same` column that splits very large groups into smaller ones.
 
 ## Citation
 If you use Pairwise Compare, please cite it with the metadata in [CITATION.cff](CITATION.cff) (the "Cite this repository" button of GitHub uses it).

@@ -12,7 +12,7 @@ from pairwise_compare.comparison_tools.PairwiseCompare import PairwiseCompare, a
 
 class PairwiseCompareManager:
     """
-    Compare the rows of a dataframe in pairs, as `compare_pairs` does, and keep the comparator.
+    Compare the rows of a dataframe in pairs, as `compare_pairs` does, and keep the results.
 
     The comparisons are made when the object is created. Calling the object returns the results as a dataframe.
     See `compare_pairs` for the parameters.
@@ -28,6 +28,7 @@ class PairwiseCompareManager:
         comparator: Optional[Comparator] = None,
     ):
         """Check the arguments and compare the rows (`compare_pairs` describes the parameters)."""
+
         different = as_column_list("different", different)
         same = as_column_list("same", same)
         drop = as_column_list("drop", drop)
@@ -56,30 +57,29 @@ class PairwiseCompareManager:
                 f"`drop` can only have columns of `same` or `different`, not {sorted(not_group_columns)}."
             )
 
-        self._comparator = PearsonsCorrelation() if comparator is None else comparator
+        comparator = PearsonsCorrelation() if comparator is None else comparator
 
         if same:
             # compare rows of different values in `different`, within each group of `same`
             comparison = PairwiseCompare(
-                df, self._comparator, outer_columns=same, inner_columns=different, features=features, drop=drop
+                df, comparator, outer_columns=same, inner_columns=different, features=features, drop=drop
             )
-            comparison.intra_comparisons()
+            self._results = comparison.intra_comparisons()
 
         else:
             # nothing to keep the same: the groups of the first column are compared, and then the groups of the rest
             comparison = PairwiseCompare(
-                df, self._comparator, outer_columns=different[:1], inner_columns=different[1:],
-                features=features, drop=drop,
+                df, comparator, outer_columns=different[:1], inner_columns=different[1:], features=features, drop=drop
             )
-            comparison.inter_comparisons()
+            self._results = comparison.inter_comparisons()
 
-        if not self._comparator.comparisons:
+        if self._results.empty:
             warnings.warn("No rows were compared: no two groups have different values in all the `different` columns.", UserWarning)
 
     def __call__(self) -> pd.DataFrame:
         """The results of the comparisons, with one row per pair of compared rows."""
 
-        return pd.DataFrame(self._comparator.comparisons)
+        return self._results
 
 
 def compare_pairs(
@@ -110,10 +110,10 @@ def compare_pairs(
     same:
         The columns whose values must match between two compared rows (for example, the plate). Optional.
     drop:
-        Columns of `same` or `different` to leave out of the results. They still define which rows are compared.
+        Columns of `same` or `different` to leave out of the results. They still decide which rows are compared.
     comparator:
-        How two groups of rows are compared. The default is the Pearson correlation (`PearsonsCorrelation`).
-        Use a new comparator for each call: a comparator keeps the results of everything it has compared.
+        How two rows are compared. The default is the Pearson correlation (`PearsonsCorrelation`).
+        A comparator keeps no results, so the same one can be used for any number of calls.
 
     Returns
     -------
@@ -121,11 +121,19 @@ def compare_pairs(
         One row per pair of compared rows, with the comparison (the column `pearsons_correlation` by default) and
         the values of the columns of the two rows of the pair, in the columns `<column>__group0` and
         `<column>__group1` (for the `same` columns both have the same value).
+        The first row of a pair is the one that comes first by its values in the group columns.
+        The pairs are sorted by the `same` columns (without `same` columns, by the first `different` column of the
+        first row and then of the second row), then by the other `different` columns of the first row and then of the
+        second row, and then by the position of the rows in `df`.
 
     Notes
     -----
     Rows with a missing value in a group column (`same` or `different`) are left out, with a warning.
     Rows with a missing value in a feature column are kept, and their comparisons are missing.
+
+    The results table needs memory for every pair of compared rows, and finding the pairs inside one group of `same`
+    values needs memory for every combination of two rows of the group. In a test with one group they peaked at about
+    80 bytes for every combination (6,000 rows: 2.9 GB), so split very large groups with another `same` column.
 
     Examples
     --------

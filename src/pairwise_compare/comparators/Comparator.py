@@ -1,56 +1,61 @@
 """The template that every comparator follows."""
 
 from abc import ABC, abstractmethod
-from collections import defaultdict
+from typing import Any
 
-import pandas as pd
+import numpy as np
 
 
 class Comparator(ABC):
     """
-    Template of a comparator, which compares the rows of two groups and keeps the results.
+    Template of a comparator, which compares pairs of rows of a table of numbers.
 
-    A comparator stores its results in `self._comparisons`, which is later converted to a dataframe:
-    each key is a column name, and the list of values of a key has one value per row of the dataframe.
-    Call this constructor (`super().__init__()`) when inheriting from this class.
+    A comparator keeps no results: `compare` returns the values of the pairs it is given, so one comparator can be
+    used for any number of comparisons.
+    The engine first calls `prepare` once with the feature values of all the rows that can be compared, and then
+    calls `compare` with the output of `prepare` and the row numbers of the pairs.
+    The rows of a pair are always `rows0[k]` and `rows1[k]`, and the engine decides which rows are paired.
 
-    The engine calls `__call__` for each pair of groups, and then `save_groups` to store the values of the
-    group columns of the same pair, so `save_groups` can rely on the arguments of the call just before it.
-    A comparator keeps the results of all the comparisons it was used for, so use a new comparator for each
-    set of comparisons.
+    Parameters
+    ----------
+    name:
+        The name of the column of the results that holds the values of this comparator.
     """
 
-    def __init__(self):
-        """Start with no stored results."""
-        self._comparisons = defaultdict(list)
+    def __init__(self, name: str):
+        """Store the name of the column of the results."""
+        self.name = name
 
-    @property
-    def comparisons(self) -> dict[str, list]:
-        """The results, as a dictionary of column names to the list of values of that column."""
-        return self._comparisons
-
-    @abstractmethod
-    def __call__(self, group0: pd.DataFrame, group1: pd.DataFrame) -> None:
+    def prepare(self, values: np.ndarray) -> Any:
         """
-        Compare two groups and save the result in `self._comparisons`.
+        Prepare the feature values once, so `compare` can use them for every pair (by default, they are used as they are).
 
         Parameters
         ----------
-        group0, group1:
-            The feature values of the rows of each group, with one row per sample.
+        values:
+            The feature values as floats, with one row per sample and one column per feature.
+
+        Returns
+        -------
+        Any
+            Whatever `compare` needs, indexed by the same row numbers as `values`.
         """
+        return values
 
     @abstractmethod
-    def save_groups(self, group_columns: list[str], **groups: tuple) -> None:
+    def compare(self, prepared: Any, rows0: np.ndarray, rows1: np.ndarray) -> np.ndarray:
         """
-        Save the values of the group columns of the groups that were just compared.
+        Compare the pairs of rows `(rows0[k], rows1[k])`.
 
         Parameters
         ----------
-        group_columns:
-            The names of the group columns to save.
-        groups:
-            The values of those columns for each group, as `group0=(value, ...)` and `group1=(value, ...)`,
-            with one value per name in `group_columns`.
-            Save them in columns named `<column>__<group name>`, for example `Metadata_Well__group0`.
+        prepared:
+            The output of `prepare`.
+        rows0, rows1:
+            The row numbers (integer arrays of the same length) of the first and the second row of each pair.
+
+        Returns
+        -------
+        np.ndarray
+            One value for each pair, in the order of the pairs.
         """

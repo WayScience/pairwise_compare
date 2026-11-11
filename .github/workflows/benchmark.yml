@@ -1,0 +1,47 @@
+name: Benchmarks
+
+# After a merge into main (and on demand), time compare_pairs and compare the times with the previous run.
+# The times of a shared runner vary, so an alert (a run more than twice as slow) is shown in the summary of the run
+# and never fails it. The previous results are kept in the cache of the workflow.
+on:
+  push:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  benchmark:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0  # the version comes from the git tags
+        persist-credentials: false  # the job only reads the repository
+
+    - name: Install uv
+      uses: astral-sh/setup-uv@v6
+
+    - name: Run the benchmarks
+      run: uv run --locked --python 3.12 pytest -o addopts= --benchmark-only --benchmark-json=benchmark.json
+
+    - name: Restore the previous results
+      uses: actions/cache@v4
+      with:
+        path: cache
+        key: benchmark-${{ github.sha }}
+        restore-keys: benchmark-
+
+    - name: Compare with the previous results
+      uses: benchmark-action/github-action-benchmark@v1
+      with:
+        tool: pytest
+        output-file-path: benchmark.json
+        external-data-json-path: cache/benchmark-data.json
+        alert-threshold: "200%"
+        fail-on-alert: false
+        summary-always: true
+        github-token: ${{ secrets.GITHUB_TOKEN }}
