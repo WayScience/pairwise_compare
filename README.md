@@ -129,15 +129,51 @@ All other columns are ignored.
   2. the `different` columns of `group0` (the other ones without `same` columns) and then those of `group1`;
   3. the position in the dataframe of `group0` and then of `group1`.
 
-## Other comparisons
-`compare_pairs` uses the Pearson correlation by default.
-To compare the rows another way, pass a comparator, which is a class that inherits from `Comparator` (see [Comparator.py](src/pairwise_compare/comparators/Comparator.py) and the examples in [test_comparator.py](tests/test_comparator.py)).
+## Metrics
+`compare_pairs` computes the Pearson correlation by default.
+Pass one of the other comparators to compute another metric of the two rows of each pair, across their features:
+
+| Comparator | Column of the results | Higher or lower is more similar | What it computes |
+| --- | --- | --- | --- |
+| `PearsonsCorrelation` | `pearsons_correlation` | higher (1 is perfect) | The correlation of the two rows after centering each row. |
+| `SpearmanCorrelation` | `spearman_correlation` | higher (1 is perfect) | Pearson's correlation of the ranks of the features of each row, so any increasing relation counts (ties get the average rank). |
+| `CosineSimilarity` | `cosine_similarity` | higher (1 is the same direction) | The cosine of the angle between the two rows, without centering them. |
+| `EuclideanDistance` | `euclidean_distance` | lower (0 is identical) | The square root of the sum of the squared differences of the features. |
+| `ManhattanDistance` | `manhattan_distance` | lower (0 is identical) | The sum of the absolute differences of the features. |
+
+The distances use the features as they are, so features with large values weigh more: scale the features first if they should weigh the same.
+A row with the same value in every feature has no correlation, and a row of zeros has no cosine similarity, so their results are missing (NaN), with a warning.
+Rows with a missing feature value give missing results for every metric.
+
+A pair is not repeated the other way round, so the metrics are symmetric: they give the same value when the two rows are swapped.
+
+### Several metrics in one call
+Pass a list of comparators to get one column for each, from the same pairs of rows (the comparators need different names):
+
+```python
+from pairwise_compare import CosineSimilarity, EuclideanDistance, PearsonsCorrelation, compare_pairs
+
+compare_pairs(
+    wells,
+    different=["cell_line", "well"],
+    features=["area", "intensity", "texture", "eccentricity"],
+    same=["plate"],
+    comparator=[PearsonsCorrelation(), CosineSimilarity(), EuclideanDistance()],
+)
+```
+
+The results have the columns `pearsons_correlation`, `cosine_similarity` and `euclidean_distance`, followed by the columns of the groups, with one row for each pair as before.
+The pairs are found once, so this is faster than one call for each metric.
+
+### Your own comparator
+A comparator is a class that inherits from `Comparator` (see [Comparator.py](src/pairwise_compare/comparators/Comparator.py) and the examples in [test_comparator.py](tests/test_comparator.py)).
 A comparator has a name, which is the name of its column in the results, and two methods:
 - `prepare(values)` is called once with the feature values of all the compared rows (a numpy array with one row per sample), and returns whatever `compare` needs.
   By default, it returns the values as they are.
 - `compare(prepared, rows0, rows1)` returns one value for each pair of rows `(rows0[k], rows1[k])`, as a numpy array.
 
 A comparator keeps no results, so the same comparator can be used for any number of calls to `compare_pairs`.
+The two rows of a pair are in an arbitrary order, so `compare` must be symmetric.
 
 ## Speed
 All the pairs are found and compared with array operations, so the time grows with the number of pairs and the number of features, not with a loop over the groups.

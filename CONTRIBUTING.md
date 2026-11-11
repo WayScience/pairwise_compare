@@ -91,8 +91,19 @@ Its constructor gives the name of the column of the results, and it has two meth
   It should compare all the pairs with array operations, and not loop over them.
 
 A comparator keeps no results, so one comparator can be used for any number of calls.
-Users pass an instance of it to the entry point, as in `compare_pairs(df, different=[...], features=[...], comparator=MyComparator())`.
-`tests/test_comparator.py` has small examples, and `comparators/PearsonsCorrelation.py` is the one that is used by default.
+A comparator must be symmetric, because the two rows of a pair are in an arbitrary order.
+Users pass an instance of it, or a list of instances, to the entry point, as in `compare_pairs(df, different=[...], features=[...], comparator=MyComparator())`.
+`tests/test_comparator.py` has small examples.
+
+### Adding a metric
+The metrics are in `comparators/`, and each one is a comparator with a default name for its column.
+- A metric that is the dot product of two prepared rows (`PearsonsCorrelation`, `SpearmanCorrelation` and `CosineSimilarity`) inherits from `DotProductComparator`, and only gives `prepare`.
+  `DotProductComparator` takes the dot products with matrix products, or pair by pair when few pairs are needed.
+- A distance (`EuclideanDistance` and `ManhattanDistance`) inherits from `PairwiseDistance` in `Distances.py`, and only gives `distance` of the differences of the features.
+  It compares a chunk of pairs at a time, which keeps the memory use low.
+- Export the comparator in `src/pairwise_compare/__init__.py`, and add it to the table of the README.
+- Add a row to `METRICS` in `tests/test_metrics.py`, with the same metric from scipy as the oracle, the default name of the column, and the warning that it gives for a row that has no value for it.
+  That row runs the metric against scipy for every pair, with ties, copies, rows of the same value, rows of zeros and a missing value.
 
 ## Versions and releases
 The version is not written in any file.
