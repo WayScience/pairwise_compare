@@ -25,6 +25,7 @@ dev = [
     "pytest-cov>=5.0.0",
     "pyarrow>=18.0.0",  # the tests read parquet files
     "scikit-learn>=1.3",  # the iris and wine datasets of the tests
+    "scipy>=1.10",  # the oracle of the metrics in the tests
     "hypothesis>=6.100",  # the property-based test
     "pytest-benchmark>=5.0",  # the benchmarks, which are skipped in the normal runs
 ]

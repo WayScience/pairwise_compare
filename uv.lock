@@ -2827,6 +2827,9 @@ dev = [
     { name = "pytest-cov" },
     { name = "scikit-learn", version = "1.7.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
     { name = "scikit-learn", version = "1.9.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
+    { name = "scipy", version = "1.15.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
+    { name = "scipy", version = "1.17.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version == '3.11.*'" },
+    { name = "scipy", version = "1.18.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
 ]
 docs = [
     { name = "hypothesis", version = "6.168.5", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
@@ -2841,6 +2844,9 @@ docs = [
     { name = "pytest-cov" },
     { name = "scikit-learn", version = "1.7.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
     { name = "scikit-learn", version = "1.9.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
+    { name = "scipy", version = "1.15.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
+    { name = "scipy", version = "1.17.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version == '3.11.*'" },
+    { name = "scipy", version = "1.18.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
 ]
 
 [package.metadata]
@@ -2857,6 +2863,7 @@ dev = [
     { name = "pytest-benchmark", specifier = ">=5.0" },
     { name = "pytest-cov", specifier = ">=5.0.0" },
     { name = "scikit-learn", specifier = ">=1.3" },
+    { name = "scipy", specifier = ">=1.10" },
 ]
 docs = [
     { name = "hypothesis", specifier = ">=6.100" },
@@ -2867,6 +2874,7 @@ docs = [
     { name = "pytest-benchmark", specifier = ">=5.0" },
     { name = "pytest-cov", specifier = ">=5.0.0" },
     { name = "scikit-learn", specifier = ">=1.3" },
+    { name = "scipy", specifier = ">=1.10" },
 ]
 
 [[package]]

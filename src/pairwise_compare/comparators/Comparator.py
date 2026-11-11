@@ -5,6 +5,9 @@ from typing import Any
 
 import numpy as np
 
+# the most numbers that a block of results or a chunk of gathered rows holds, which keeps the memory use low
+_BLOCK_ELEMENTS = 10_000_000
+
 
 class Comparator(ABC):
     """
@@ -15,6 +18,8 @@ class Comparator(ABC):
     The engine first calls `prepare` once with the feature values of all the rows that can be compared, and then
     calls `compare` with the output of `prepare` and the row numbers of the pairs.
     The rows of a pair are always `rows0[k]` and `rows1[k]`, and the engine decides which rows are paired.
+    The two rows of a pair are in an arbitrary order (the pairs are not repeated the other way round), so a comparator
+    must be symmetric: `compare` must give the same value when the two rows are swapped.
 
     Parameters
     ----------
@@ -25,6 +30,11 @@ class Comparator(ABC):
     def __init__(self, name: str):
         """Store the name of the column of the results."""
         self.name = name
+
+    @staticmethod
+    def _block_size(n_values: int) -> int:
+        """How many items fit in one block when each item holds `n_values` numbers (at least 1), so the memory use stays low."""
+        return max(1, _BLOCK_ELEMENTS // n_values)
 
     def prepare(self, values: np.ndarray) -> Any:
         """
