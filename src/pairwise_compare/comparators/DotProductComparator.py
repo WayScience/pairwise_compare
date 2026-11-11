@@ -47,6 +47,9 @@ class DotProductComparator(Comparator):
         """The dot product of the two rows of each pair, from matrix products when many of the possible pairs are needed."""
 
         n_pairs = len(rows0)
+        if n_pairs == 0:
+            return np.empty(0)
+
         rows = np.unique(np.concatenate([rows0, rows1]))
 
         if n_pairs < _SPARSE_SHARE * len(rows) ** 2:

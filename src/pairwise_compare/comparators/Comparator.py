@@ -44,6 +44,7 @@ class Comparator(ABC):
         ----------
         values:
             The feature values as floats, with one row per sample and one column per feature.
+            The same array is given to every comparator of a call, so do not change it: make a copy to change values.
 
         Returns
         -------

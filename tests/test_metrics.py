@@ -109,6 +109,9 @@ def test_rows_without_a_value_give_nan_and_one_warning_and_the_others_match_scip
     assert [w.category for w in caught] == ([UserWarning] if metric.warning else [])
     assert metric.warning is None or metric.warning in str(caught[0].message)
 
+    # no pairs, no values
+    assert compare(metric.comparator(), MESSY[8:], np.empty(0, dtype=int), np.empty(0, dtype=int)).shape == (0,)
+
 
 def test_default_and_custom_names_of_the_columns(metric):
     """The default name of the column of the results, and a custom one."""

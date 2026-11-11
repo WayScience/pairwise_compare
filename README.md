@@ -170,6 +170,7 @@ A comparator is a class that inherits from `Comparator` (see [Comparator.py](src
 A comparator has a name, which is the name of its column in the results, and two methods:
 - `prepare(values)` is called once with the feature values of all the compared rows (a numpy array with one row per sample), and returns whatever `compare` needs.
   By default, it returns the values as they are.
+  It must not change `values` in place, because the same array is given to every comparator of a call.
 - `compare(prepared, rows0, rows1)` returns one value for each pair of rows `(rows0[k], rows1[k])`, as a numpy array.
 
 A comparator keeps no results, so the same comparator can be used for any number of calls to `compare_pairs`.

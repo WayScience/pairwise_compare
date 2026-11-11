@@ -87,6 +87,7 @@ Its constructor gives the name of the column of the results, and it has two meth
 - `prepare(values)` is called once with the feature values of all the compared rows, and returns what `compare` needs.
   It is optional, and by default it returns the values as they are.
   Do the work that is the same for every pair here, such as normalizing each row.
+  Do not change `values` in place, because the same array is given to every comparator of a call (make a copy instead).
 - `compare(prepared, rows0, rows1)` returns one value for each pair of rows `(rows0[k], rows1[k])`.
   It should compare all the pairs with array operations, and not loop over them.
 
