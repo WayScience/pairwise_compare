@@ -124,7 +124,10 @@ All other columns are ignored.
 - The first row of a pair (`group0`) is the one that comes first by its values in the group columns, and the second row (`group1`) comes after it.
   With `same` columns, rows are first compared by their `same` values, and then by their `different` values, column by column.
   Without `same` columns, rows are compared by the first `different` column, and then by the other ones.
-- The pairs are ordered by the groups of `group0`, then of `group1`, and then by the position of the rows in the dataframe.
+- The pairs are sorted by these keys, in this order:
+  1. the `same` columns (both rows of a pair have the same values in them), or, without `same` columns, the first `different` column of `group0` and then of `group1`;
+  2. the `different` columns of `group0` (the other ones without `same` columns) and then those of `group1`;
+  3. the position in the dataframe of `group0` and then of `group1`.
 
 ## Other comparisons
 `compare_pairs` uses the Pearson correlation by default.

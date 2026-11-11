@@ -121,8 +121,10 @@ def compare_pairs(
         One row per pair of compared rows, with the comparison (the column `pearsons_correlation` by default) and
         the values of the columns of the two rows of the pair, in the columns `<column>__group0` and
         `<column>__group1` (for the `same` columns both have the same value).
-        The first row of a pair is the one that comes first by its values in the group columns,
-        and the pairs are ordered by these values and then by the position of the rows in `df`.
+        The first row of a pair is the one that comes first by its values in the group columns.
+        The pairs are sorted by the `same` columns (without `same` columns, by the first `different` column of the
+        first row and then of the second row), then by the other `different` columns of the first row and then of the
+        second row, and then by the position of the rows in `df`.
 
     Notes
     -----
