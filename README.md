@@ -1,37 +1,32 @@
 [![Tests](https://github.com/WayScience/pairwise_compare/actions/workflows/tests.yml/badge.svg)](https://github.com/WayScience/pairwise_compare/actions/workflows/tests.yml)
 [![codecov](https://codecov.io/gh/WayScience/pairwise_compare/graph/badge.svg)](https://codecov.io/gh/WayScience/pairwise_compare)
 # Pairwise Compare
-Compare the rows of a [tidy](https://www.jstatsoft.org/article/view/v059i10) pandas dataframe in pairs, for example the correlation between the profiles of wells that differ in their cell line.
-You choose which columns must be different and which must be the same between the two rows of a pair, and get one result per pair.
+Compare the rows of a [tidy](https://www.jstatsoft.org/article/view/v059i10) pandas dataframe in pairs, and compute a metric for every pair, such as the correlation between the profiles of two wells.
+You choose which pairs are compared with the columns that must differ and the columns that must match between the two rows of a pair, and you choose the metric: Pearson or Spearman correlation, cosine similarity, Euclidean or Manhattan distance, several of them at once, or a metric of your own.
+You get one result per pair.
 
 **The problem it solves:** as an analyst of image-based profiles, I need the similarity of every pair of samples that differ in one way and match in another (for example, wells of different cell lines on the same plate), so that I can see how replicates agree and how groups differ, because the average of a group hides how its samples relate.
 
 ```mermaid
 flowchart LR
-    subgraph U2OS["U2OS (plate P1)"]
-        A1["well A1"]
-        A2["well A2"]
-    end
-    subgraph HeLa["HeLa (plate P1)"]
-        B1["well B1"]
-        B2["well B2"]
-    end
-    A1 -.-|"r = 1.00"| A2
-    B1 -.-|"r = 1.00"| B2
-    A1 ---|"r = 0.90"| B1
-    A2 ---|"r = 0.90"| B1
-    A1 ---|"r = 0.92"| B2
-    A2 ---|"r = 0.92"| B2
+    A["<b>1. Your dataframe</b><br/>one row per sample,<br/>for example a well"]
+    B["<b>2. The pairs</b><br/>rows that differ in the<br/>'different' columns<br/>and match in the 'same' columns"]
+    C["<b>3. The metric</b><br/>computed across the features<br/>for the two rows of each pair"]
+    D["<b>4. Your results</b><br/>one row per pair:<br/>the metric values and the<br/>group values of both rows"]
+    A --> B --> C --> D
 ```
-
-Each line is one result: the Pearson correlation `r` of two wells.
-Solid lines join wells of different cell lines, and dashed lines join the replicate wells of one cell line.
 
 The [example notebook](docs/example_pairwise_comparisons.ipynb) uses a dataset from the [nf1_schwann_cell_painting_data](https://github.com/WayScience/nf1_schwann_cell_painting_data).
 Most of the development is in the `src` folder.
 
+## Installation
+You can install the package with either of the following commands:<br>
+`pip install pairwise-compare`<br>
+`uv add pairwise-compare`
+
 ## Quick start
-Take four wells of one plate, with the metadata that identify them and four measured features:
+Take four wells of one plate: two of the cell line U2OS and two of HeLa.
+Each well has the metadata that identify it and four measured features:
 
 ```python
 import pandas as pd
@@ -57,7 +52,8 @@ compare_pairs(
 )
 ```
 
-The result has one row per pair of wells, with their Pearson correlation across the features:
+Each pair is two wells of different cell lines.
+The result has one row per pair, with the Pearson correlation of the two wells across the features (the default metric), and the group values of the two wells:
 
 | pearsons_correlation | plate__group0 | plate__group1 | cell_line__group0 | cell_line__group1 | well__group0 | well__group1 |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -66,10 +62,10 @@ The result has one row per pair of wells, with their Pearson correlation across 
 | 0.92 | P1 | P1 | HeLa | U2OS | B2 | A1 |
 | 0.92 | P1 | P1 | HeLa | U2OS | B2 | A2 |
 
-This call compares wells of different cell lines (the solid lines in the picture).
-Wells of the same cell line are not compared with each other.
+This call compares A1 and A2 with B1 and B2, so four pairs.
+Wells of the same cell line (A1 and A2, or B1 and B2) are not compared with each other.
 
-To compare the replicate wells of each cell line instead (the dashed lines), keep the cell line the same and ask for different wells:
+To compare the replicate wells of each cell line instead, keep the cell line the same and ask for different wells:
 
 ```python
 compare_pairs(
@@ -89,10 +85,69 @@ Each column must either match (`same`) or differ (`different`), so one call give
 To get every pair of different wells in one call, use `different=["well"]` and `same=["plate"]`.
 The results only hold the columns you name, so add the cell line to each pair afterwards by looking it up from its well.
 
-## Installation
-You can install the package with either of the following commands:<br>
-`pip install pairwise-compare`<br>
-`uv add pairwise-compare`
+To compute another metric, pass a comparator, for example `comparator=CosineSimilarity()` (see [Metrics](#metrics)).
+
+## Metrics
+A metric is computed for the two rows of each pair, across their features.
+`compare_pairs` computes the Pearson correlation by default, and the argument `comparator` chooses another one.
+These comparators are included:
+
+| Comparator | Column of the results | Higher or lower is more similar | What it computes |
+| --- | --- | --- | --- |
+| `PearsonsCorrelation` | `pearsons_correlation` | higher (1 is perfect) | The correlation of the two rows after centering each row. |
+| `SpearmanCorrelation` | `spearman_correlation` | higher (1 is perfect) | Pearson's correlation of the ranks of the features of each row, so any increasing relation counts (ties get the average rank). |
+| `CosineSimilarity` | `cosine_similarity` | higher (1 is the same direction) | The cosine of the angle between the two rows, without centering them. |
+| `EuclideanDistance` | `euclidean_distance` | lower (0 is identical) | The square root of the sum of the squared differences of the features. |
+| `ManhattanDistance` | `manhattan_distance` | lower (0 is identical) | The sum of the absolute differences of the features. |
+
+The distances use the features as they are, so features with large values weigh more: scale the features first if they should weigh the same.
+A row with the same value in every feature has no correlation, and a row of zeros has no cosine similarity, so their results are missing (NaN), with a warning.
+Rows with a missing feature value give missing results for every metric.
+A pair is not repeated the other way round, so the metrics are symmetric: they give the same value when the two rows are swapped.
+
+Pass an instance of the comparator to use it:
+
+```python
+from pairwise_compare import SpearmanCorrelation
+
+compare_pairs(
+    wells,
+    different=["cell_line", "well"],
+    features=["area", "intensity", "texture", "eccentricity"],
+    same=["plate"],
+    comparator=SpearmanCorrelation(),  # the column of the results is spearman_correlation
+)
+```
+
+### Several metrics in one call
+Pass a list of comparators to get one column for each, from the same pairs of rows (the comparators need different names):
+
+```python
+from pairwise_compare import CosineSimilarity, EuclideanDistance, PearsonsCorrelation, compare_pairs
+
+compare_pairs(
+    wells,
+    different=["cell_line", "well"],
+    features=["area", "intensity", "texture", "eccentricity"],
+    same=["plate"],
+    comparator=[PearsonsCorrelation(), CosineSimilarity(), EuclideanDistance()],
+)
+```
+
+The results have the columns `pearsons_correlation`, `cosine_similarity` and `euclidean_distance`, followed by the columns of the groups, with one row for each pair as before.
+The pairs are found once, so this is faster than one call for each metric.
+
+### Your own metric
+Any metric of two rows can be added with your own comparator.
+A comparator is a class that inherits from `Comparator` (see [Comparator.py](src/pairwise_compare/comparators/Comparator.py) and the examples in [test_comparator.py](tests/test_comparator.py)).
+A comparator has a name, which is the name of its column in the results, and two methods:
+- `prepare(values)` is called once with the feature values of all the compared rows (a numpy array with one row per sample), and returns whatever `compare` needs.
+  By default, it returns the values as they are.
+  It must not change `values` in place, because the same array is given to every comparator of a call.
+- `compare(prepared, rows0, rows1)` returns one value for each pair of rows `(rows0[k], rows1[k])`, as a numpy array.
+
+A comparator keeps no results, so the same comparator can be used for any number of calls to `compare_pairs`.
+The two rows of a pair are in an arbitrary order, so `compare` must be symmetric.
 
 ## Data format
 The dataframe is [tidy](https://www.jstatsoft.org/article/view/v059i10), as described by Wickham (2014): one row per sample (for example, one well) and one column per variable.
@@ -118,7 +173,7 @@ All other columns are ignored.
 - A row with a missing value in a `same` or `different` column is **left out** of the comparisons, with a warning that says how many rows and which columns.
 - A row with a missing value in a feature column is kept, and the results of its comparisons are missing (NaN), with a warning.
 - Missing values in other columns are ignored.
-- A row with the same value in every feature has no Pearson correlation (NaN), with a warning.
+- A row with the same value in every feature has no correlation (NaN), and a row of zeros has no cosine similarity (NaN), each with a warning.
 
 ## Order of the results
 - The first row of a pair (`group0`) is the one that comes first by its values in the group columns, and the second row (`group1`) comes after it.
@@ -128,53 +183,6 @@ All other columns are ignored.
   1. the `same` columns (both rows of a pair have the same values in them), or, without `same` columns, the first `different` column of `group0` and then of `group1`;
   2. the `different` columns of `group0` (the other ones without `same` columns) and then those of `group1`;
   3. the position in the dataframe of `group0` and then of `group1`.
-
-## Metrics
-`compare_pairs` computes the Pearson correlation by default.
-Pass one of the other comparators to compute another metric of the two rows of each pair, across their features:
-
-| Comparator | Column of the results | Higher or lower is more similar | What it computes |
-| --- | --- | --- | --- |
-| `PearsonsCorrelation` | `pearsons_correlation` | higher (1 is perfect) | The correlation of the two rows after centering each row. |
-| `SpearmanCorrelation` | `spearman_correlation` | higher (1 is perfect) | Pearson's correlation of the ranks of the features of each row, so any increasing relation counts (ties get the average rank). |
-| `CosineSimilarity` | `cosine_similarity` | higher (1 is the same direction) | The cosine of the angle between the two rows, without centering them. |
-| `EuclideanDistance` | `euclidean_distance` | lower (0 is identical) | The square root of the sum of the squared differences of the features. |
-| `ManhattanDistance` | `manhattan_distance` | lower (0 is identical) | The sum of the absolute differences of the features. |
-
-The distances use the features as they are, so features with large values weigh more: scale the features first if they should weigh the same.
-A row with the same value in every feature has no correlation, and a row of zeros has no cosine similarity, so their results are missing (NaN), with a warning.
-Rows with a missing feature value give missing results for every metric.
-
-A pair is not repeated the other way round, so the metrics are symmetric: they give the same value when the two rows are swapped.
-
-### Several metrics in one call
-Pass a list of comparators to get one column for each, from the same pairs of rows (the comparators need different names):
-
-```python
-from pairwise_compare import CosineSimilarity, EuclideanDistance, PearsonsCorrelation, compare_pairs
-
-compare_pairs(
-    wells,
-    different=["cell_line", "well"],
-    features=["area", "intensity", "texture", "eccentricity"],
-    same=["plate"],
-    comparator=[PearsonsCorrelation(), CosineSimilarity(), EuclideanDistance()],
-)
-```
-
-The results have the columns `pearsons_correlation`, `cosine_similarity` and `euclidean_distance`, followed by the columns of the groups, with one row for each pair as before.
-The pairs are found once, so this is faster than one call for each metric.
-
-### Your own comparator
-A comparator is a class that inherits from `Comparator` (see [Comparator.py](src/pairwise_compare/comparators/Comparator.py) and the examples in [test_comparator.py](tests/test_comparator.py)).
-A comparator has a name, which is the name of its column in the results, and two methods:
-- `prepare(values)` is called once with the feature values of all the compared rows (a numpy array with one row per sample), and returns whatever `compare` needs.
-  By default, it returns the values as they are.
-  It must not change `values` in place, because the same array is given to every comparator of a call.
-- `compare(prepared, rows0, rows1)` returns one value for each pair of rows `(rows0[k], rows1[k])`, as a numpy array.
-
-A comparator keeps no results, so the same comparator can be used for any number of calls to `compare_pairs`.
-The two rows of a pair are in an arbitrary order, so `compare` must be symmetric.
 
 ## Speed
 All the pairs are found and compared with array operations, so the time grows with the number of pairs and the number of features, not with a loop over the groups.
