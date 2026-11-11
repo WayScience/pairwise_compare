@@ -5,7 +5,7 @@ import warnings
 import numpy as np
 import pandas as pd
 import pytest
-from helpers import expected_order
+from helpers import expected_order, numpy_correlations
 from hypothesis import HealthCheck, assume, given, settings
 from hypothesis import strategies as st
 from hypothesis.extra.numpy import arrays
@@ -181,3 +181,29 @@ def test_any_valid_comparison_gives_the_pairs_order_and_correlations_of_the_slow
     np.testing.assert_allclose(result["pearsons_correlation"].to_numpy(), expected, atol=1e-9, equal_nan=True)
     # also when nothing is compared, the results have their columns
     assert list(result.columns) == ["pearsons_correlation"] + [f"{c}__group{g}" for c in kept for g in (0, 1)]
+
+
+def test_the_helpers_give_answers_that_are_worked_out_by_hand():
+    """The oracle of the pairs and the numpy correlations are checked on rows with answers that are worked out by hand."""
+    # without `same` columns, rows 0 to 3 pair up when both a and b differ: (0, 1), (0, 3), (1, 2) and (2, 3).
+    # The first row of a pair has the smaller (a, b), so (1, 2) is (2, 1), and the pairs are sorted by the `a` of both
+    # rows before the `b` of either: sorting by the whole first row would put (0, 1) before (2, 3).
+    df = pd.DataFrame({"a": [1, 3, 1, 2], "b": [2, 1, 3, 1], "well": ["W0", "W1", "W2", "W3"], "x": [1.0, 2, 3, 4], "y": [2.0, 1, 4, 3]})
+    rows0, rows1 = expected_order(df, ["a", "b"])
+    assert (rows0.tolist(), rows1.tolist()) == ([0, 2, 0, 2], [3, 3, 1, 1])
+
+    result = compare_pairs(df, different=["a", "b"], features=["x", "y"])
+    assert [result[f"{column}__group{group}"].tolist() for group in (0, 1) for column in "ab"] == [
+        [1, 1, 1, 1], [2, 3, 2, 3], [2, 2, 3, 3], [1, 1, 1, 1],  # a and b of the first rows, then of the second rows
+    ]
+
+    # with `same` columns, each group g is ordered by the values of w, and the groups follow each other
+    df = pd.DataFrame({"g": [1, 1, 1, 2, 2], "w": [3, 1, 2, 5, 4]})
+    rows0, rows1 = expected_order(df, ["w"], ["g"])
+    assert (rows0.tolist(), rows1.tolist()) == ([1, 1, 2, 4], [2, 0, 0, 3])
+
+    # the wells are (1, 2, 3), (2, 4, 6) and (3, 2, 1) in their three features: W0 and W1 go up together (correlation 1),
+    # and W2 goes the other way compared with both (correlation -1)
+    wells = pd.DataFrame({"well": ["W0", "W1", "W2"], "f1": [1.0, 2, 3], "f2": [2.0, 4, 2], "f3": [3.0, 6, 1]})
+    pairs = pd.DataFrame({"well__group0": ["W0", "W0", "W1"], "well__group1": ["W1", "W2", "W2"]})
+    assert numpy_correlations(wells, ["f1", "f2", "f3"], pairs) == pytest.approx([1.0, -1.0, -1.0], abs=1e-12)

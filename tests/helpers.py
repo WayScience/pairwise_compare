@@ -11,7 +11,9 @@ def expected_order(df: pd.DataFrame, different: list[str], same: list[str] = ())
     Two rows form a pair when they have a different value in every `different` column and the same value in every
     `same` column. The first row of a pair is the one with the smaller values in the group columns (the `same` columns
     and then the `different` columns, or the first `different` column and then the other ones without `same` columns).
-    The pairs are ordered by the groups of the first row, of the second row, and then by the position of the rows.
+    The pairs are sorted by the outer groups of the first and the second row (the `same` columns, or the first `different`
+    column without `same` columns), then by the inner groups (the other columns) of the first and the second row, and
+    then by the positions of the rows.
     Every pair of rows is tested (with arrays of the size of rows x rows), so this is only for small dataframes
     without missing values in the group columns.
 
