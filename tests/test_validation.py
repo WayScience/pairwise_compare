@@ -45,6 +45,20 @@ def call(data, **changes):
         ),
         pytest.param({"comparator": "pearson"}, TypeError, "instance of Comparator", id="a comparator name"),
         pytest.param({"comparator": PearsonsCorrelation}, TypeError, "instance of Comparator", id="a comparator class"),
+        pytest.param({"comparator": []}, ValueError, "empty list: give at least one comparator", id="an empty list of comparators"),
+        pytest.param({"comparator": [PearsonsCorrelation(), "cosine"]}, TypeError, "list of instances of Comparator", id="a name in the list"),
+        pytest.param(
+            {"comparator": [PearsonsCorrelation(), PearsonsCorrelation()]},
+            ValueError,
+            r"need different names .* \['pearsons_correlation'\] are repeated",
+            id="two comparators with the same name",
+        ),
+        pytest.param(
+            {"comparator": [PearsonsCorrelation(name="plate__group0")]},
+            ValueError,
+            r"cannot be named like the columns of the group values: \['plate__group0'\]",
+            id="a comparator named like a group column",
+        ),
     ],
 )
 def test_mistakes_give_a_clear_error(small_data, changes, error, message):
