@@ -10,7 +10,14 @@ from hypothesis import HealthCheck, assume, given, settings
 from hypothesis import strategies as st
 from hypothesis.extra.numpy import arrays
 
-from pairwise_compare import PearsonsCorrelation, compare_pairs
+from pairwise_compare import (
+    CosineSimilarity,
+    EuclideanDistance,
+    ManhattanDistance,
+    PearsonsCorrelation,
+    SpearmanCorrelation,
+    compare_pairs,
+)
 from pairwise_compare.comparison_tools.PairwiseCompare import PairwiseCompare, _sort_order
 from pairwise_compare.comparison_tools.PairwiseCompareManager import PairwiseCompareManager
 
@@ -77,6 +84,29 @@ def test_a_comparator_can_be_used_again(small_data):
 
     pd.testing.assert_frame_equal(compare(df, features, comparator=comparator), compare(df, features, comparator=comparator))
     pd.testing.assert_frame_equal(compare(df, features), compare(df, features, comparator=comparator))
+
+
+@pytest.mark.parametrize(
+    "arguments", [{"different": ["well"], "same": ["plate"]}, {"different": ["line", "well"]}], ids=["within groups", "between groups"]
+)
+def test_a_list_of_comparators_gives_a_column_for_each_from_the_same_pairs(small_data, arguments):
+    """A list of comparators gives a column for each, in order, and the same pairs and labels as one call for each."""
+    df, features = small_data
+    comparators = [PearsonsCorrelation(), CosineSimilarity(), EuclideanDistance(), ManhattanDistance(), SpearmanCorrelation()]
+    names = [comparator.name for comparator in comparators]
+
+    result = compare_pairs(df, features=features, comparator=comparators, **arguments)
+
+    assert list(result.columns)[:5] == names
+    for comparator in comparators:
+        single = compare_pairs(df, features=features, comparator=comparator, **arguments)
+        pd.testing.assert_frame_equal(result[[comparator.name]], single[[comparator.name]])
+        # the group columns are those of any single call
+        pd.testing.assert_frame_equal(result.iloc[:, 5:], single.drop(columns=comparator.name))
+
+    # a list of one comparator, and a tuple, are the same as the comparator itself
+    pd.testing.assert_frame_equal(compare_pairs(df, features=features, comparator=[PearsonsCorrelation()], **arguments), compare_pairs(df, features=features, **arguments))
+    pd.testing.assert_frame_equal(compare_pairs(df, features=features, comparator=tuple(comparators), **arguments), result)
 
 
 def test_manager_gives_the_same_results(small_data):
@@ -148,6 +178,14 @@ def comparison_cases(draw):
     return df, features, same, different, drop
 
 
+def cosine_of_rows(first, second):
+    """The cosine similarity of two rows from numpy, missing (NaN) when a row has a missing value or only zeros."""
+    if np.isnan(first).any() or np.isnan(second).any() or not first.any() or not second.any():
+        return np.nan
+
+    return float(first @ second / (np.linalg.norm(first) * np.linalg.norm(second)))
+
+
 def pearson_of_rows(first, second):
     """The Pearson correlation of two rows from numpy, missing (NaN) when a row has a missing value or no variance."""
     if np.isnan(first).any() or np.isnan(second).any() or np.ptp(first) == 0 or np.ptp(second) == 0:
@@ -166,21 +204,29 @@ def test_any_valid_comparison_gives_the_pairs_order_and_correlations_of_the_slow
 
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
-        result = compare_pairs(df, different=different, features=features, same=same or None, drop=drop or None)
+        result = compare_pairs(
+            df, different=different, features=features, same=same or None, drop=drop or None,
+            comparator=[PearsonsCorrelation(), CosineSimilarity(), EuclideanDistance()],
+        )
 
     # the slow way: every pair of rows without a missing group value, tested one by one
     valid = df.dropna(subset=used)
     rows0, rows1 = expected_order(valid, different, same)
     values = valid[features].to_numpy()
-    expected = [pearson_of_rows(values[first], values[second]) for first, second in zip(rows0, rows1)]
+    expected = {
+        "pearsons_correlation": [pearson_of_rows(values[first], values[second]) for first, second in zip(rows0, rows1)],
+        "cosine_similarity": [cosine_of_rows(values[first], values[second]) for first, second in zip(rows0, rows1)],
+        "euclidean_distance": [np.linalg.norm(values[first] - values[second]) for first, second in zip(rows0, rows1)],
+    }
 
     assert len(result) == len(rows0)
     for column in kept:
         assert list(result[f"{column}__group0"]) == list(valid[column].iloc[rows0])
         assert list(result[f"{column}__group1"]) == list(valid[column].iloc[rows1])
-    np.testing.assert_allclose(result["pearsons_correlation"].to_numpy(), expected, atol=1e-9, equal_nan=True)
+    for name, values_of_name in expected.items():
+        np.testing.assert_allclose(result[name].to_numpy(), values_of_name, atol=1e-9, equal_nan=True)
     # also when nothing is compared, the results have their columns
-    assert list(result.columns) == ["pearsons_correlation"] + [f"{c}__group{g}" for c in kept for g in (0, 1)]
+    assert list(result.columns) == list(expected) + [f"{c}__group{g}" for c in kept for g in (0, 1)]
 
 
 def test_the_helpers_give_answers_that_are_worked_out_by_hand():

@@ -9,7 +9,9 @@ from pairwise_compare import Comparator, PearsonsCorrelation
 
 def test_public_names_and_version():
     """Public names and version."""
-    assert set(pairwise_compare.__all__) == {"Comparator", "PearsonsCorrelation", "compare_pairs"}
+    assert set(pairwise_compare.__all__) == {
+        "Comparator", "CosineSimilarity", "EuclideanDistance", "ManhattanDistance", "PearsonsCorrelation", "SpearmanCorrelation", "compare_pairs"
+    }
     assert issubclass(PearsonsCorrelation, Comparator)
     assert isinstance(pairwise_compare.__version__, str)
 

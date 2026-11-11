@@ -2,7 +2,7 @@
 
 import warnings
 from collections.abc import Sequence
-from typing import Optional
+from typing import Optional, Union
 
 import numpy as np
 import pandas as pd
@@ -33,6 +33,29 @@ def as_column_list(name: str, columns: Optional[Sequence[str]]) -> list[str]:
         raise TypeError(f"`{name}` must only contain column names (strings).")
 
     return list(dict.fromkeys(columns))
+
+
+def as_comparator_list(comparator: Union[Comparator, Sequence[Comparator]]) -> list[Comparator]:
+    """
+    Check `comparator` (a comparator, or a list or tuple of them), and return the comparators as a list.
+
+    The comparators need different names, because the name of a comparator is the column of its results.
+    """
+
+    comparators = list(comparator) if isinstance(comparator, (list, tuple)) else [comparator]
+
+    if not comparators:
+        raise ValueError("`comparator` is an empty list: give at least one comparator.")
+
+    if any(not isinstance(each, Comparator) for each in comparators):
+        raise TypeError("`comparator` must be an instance of Comparator, or a list of instances of Comparator.")
+
+    names = [each.name for each in comparators]
+    repeated = sorted({name for name in names if names.count(name) > 1})
+    if repeated:
+        raise ValueError(f"The comparators need different names (the columns of the results), but {repeated} are repeated.")
+
+    return comparators
 
 
 def _codes(df: pd.DataFrame, columns: list[str]) -> np.ndarray:
@@ -92,7 +115,8 @@ class PairwiseCompare:
     df:
         The rows to compare, with the group columns and the feature columns.
     comparator:
-        Defines how two rows are compared. It keeps no results, so it can be used again.
+        Defines how two rows are compared, or a list of comparators (one column of the results for each of them,
+        from the same pairs of rows). A comparator keeps no results, so it can be used again.
     outer_columns:
         The columns that define the outer groups.
     inner_columns:
@@ -106,7 +130,7 @@ class PairwiseCompare:
     def __init__(
         self,
         df: pd.DataFrame,
-        comparator: Comparator,
+        comparator: Union[Comparator, Sequence[Comparator]],
         outer_columns: list[str],
         inner_columns: list[str],
         features: list[str],
@@ -117,8 +141,7 @@ class PairwiseCompare:
         if not isinstance(df, pd.DataFrame):
             raise TypeError("`df` must be a pandas DataFrame.")
 
-        if not isinstance(comparator, Comparator):
-            raise TypeError("`comparator` must be an instance of Comparator.")
+        comparators = as_comparator_list(comparator)
 
         outer_columns = as_column_list("outer_columns", outer_columns)
         inner_columns = as_column_list("inner_columns", inner_columns)
@@ -146,7 +169,7 @@ class PairwiseCompare:
         outer_codes = _codes(df, outer_columns)[has_groups]
         inner_codes = _codes(df, inner_columns)[has_groups]
 
-        self._comparator = comparator
+        self._comparators = comparators
         self._groups = df[outer_columns + inner_columns].iloc[np.flatnonzero(has_groups)].reset_index(drop=True)
         self._values = df[features].to_numpy(dtype=float, na_value=np.nan)[has_groups]
         self._outer_codes, self._inner_codes = outer_codes, inner_codes
@@ -154,6 +177,11 @@ class PairwiseCompare:
 
         # the group columns to save with the results
         self._saved_columns = [column for column in outer_columns + inner_columns if column not in drop]
+
+        names_of_group_columns = {f"{column}__group{group}" for column in self._saved_columns for group in (0, 1)}
+        clashing = sorted(names_of_group_columns & {each.name for each in comparators})
+        if clashing:
+            raise ValueError(f"The comparators cannot be named like the columns of the group values: {clashing}.")
 
     @staticmethod
     def _warn_about_missing_values(df: pd.DataFrame, group_columns: list[str], features: list[str]) -> None:
@@ -229,17 +257,17 @@ class PairwiseCompare:
         order = _sort_order([outer[rows0], outer[rows1], inner[rows0], inner[rows1], rows0, rows1])
         rows0, rows1 = rows0[order], rows1[order]
 
-        prepared = self._comparator.prepare(self._values)
-
         # within outer groups, the pairs of an outer group are together and are compared as a set
         edges = [0, len(rows0)]
         if split_by_outer_group and len(rows0):
             edges = [0, *(np.flatnonzero(np.diff(outer[rows0])) + 1), len(rows0)]
 
-        chunks = [self._comparator.compare(prepared, rows0[a:b], rows1[a:b]) for a, b in zip(edges[:-1], edges[1:]) if b > a]
-        values = np.concatenate(chunks) if chunks else np.empty(0)
+        results = {}
+        for comparator in self._comparators:
+            prepared = comparator.prepare(self._values)
+            chunks = [comparator.compare(prepared, rows0[a:b], rows1[a:b]) for a, b in zip(edges[:-1], edges[1:]) if b > a]
+            results[comparator.name] = np.concatenate(chunks) if chunks else np.empty(0)
 
-        results = {self._comparator.name: values}
         for column in self._saved_columns:
             for group, rows in enumerate((rows0, rows1)):
                 results[f"{column}__group{group}"] = self._groups[column].take(rows).reset_index(drop=True)

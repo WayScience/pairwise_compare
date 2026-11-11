@@ -1,7 +1,8 @@
 """The entry points: compare the rows of a dataframe in pairs, by the columns that define the groups."""
 
 import warnings
-from typing import Optional
+from collections.abc import Sequence
+from typing import Optional, Union
 
 import pandas as pd
 
@@ -25,7 +26,7 @@ class PairwiseCompareManager:
         features: list[str],
         same: Optional[list[str]] = None,
         drop: Optional[list[str]] = None,
-        comparator: Optional[Comparator] = None,
+        comparator: Optional[Union[Comparator, Sequence[Comparator]]] = None,
     ):
         """Check the arguments and compare the rows (`compare_pairs` describes the parameters)."""
 
@@ -88,7 +89,7 @@ def compare_pairs(
     features: list[str],
     same: Optional[list[str]] = None,
     drop: Optional[list[str]] = None,
-    comparator: Optional[Comparator] = None,
+    comparator: Optional[Union[Comparator, Sequence[Comparator]]] = None,
 ) -> pd.DataFrame:
     """
     Compare the rows of a dataframe in pairs, such as the wells of different cell lines, across their features.
@@ -113,13 +114,15 @@ def compare_pairs(
         Columns of `same` or `different` to leave out of the results. They still decide which rows are compared.
     comparator:
         How two rows are compared. The default is the Pearson correlation (`PearsonsCorrelation`).
+        Give a list, such as `[PearsonsCorrelation(), CosineSimilarity()]`, to get one column for each comparator
+        from the same pairs of rows (the comparators need different names).
         A comparator keeps no results, so the same one can be used for any number of calls.
 
     Returns
     -------
     pd.DataFrame
-        One row per pair of compared rows, with the comparison (the column `pearsons_correlation` by default) and
-        the values of the columns of the two rows of the pair, in the columns `<column>__group0` and
+        One row per pair of compared rows, with the comparison (the column `pearsons_correlation` by default, and
+        one column for each comparator of a list) and the values of the columns of the two rows of the pair, in the columns `<column>__group0` and
         `<column>__group1` (for the `same` columns both have the same value).
         The first row of a pair is the one that comes first by its values in the group columns.
         The pairs are sorted by the `same` columns (without `same` columns, by the first `different` column of the
