@@ -98,6 +98,15 @@ def test_warnings_when_nothing_is_compared(small_data):
     assert result.empty
     assert any("No rows were compared" in message for message in messages)
 
+    # every row is left out for a missing group value, with and without `same` columns
+    df["line"] = np.nan
+    for same in (None, ["plate"]):
+        result, messages = run(df, features, different=["line", "well"], same=same)
+
+        assert result.empty and "pearsons_correlation" in result.columns and "line__group0" in result.columns
+        assert any("8 of 8 rows have a missing value in the group columns ['line']" in message for message in messages)
+        assert any("No rows were compared" in message for message in messages)
+
 
 def test_the_other_pairs_are_compared_when_the_rows_of_a_group_have_missing_group_values(small_data):
     """With a missing well for every row of line A, the rows of A are left out, and the other lines are still compared."""

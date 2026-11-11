@@ -204,7 +204,7 @@ class PairwiseCompare:
         codes = np.column_stack([self._outer_codes, self._inner_codes])
         n_rows = len(codes)
         step = max(1, _PAIR_BLOCK // max(n_rows, 1))
-        first, second = [], []
+        first, second = [np.empty(0, dtype=np.intp)], [np.empty(0, dtype=np.intp)]  # empty when no row is left
 
         # the pairs of all rows, a block of rows at a time
         for start in range(0, n_rows, step):
