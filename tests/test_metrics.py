@@ -1,6 +1,7 @@
 """Tests of the comparators of the metrics on their own, with scipy as the oracle."""
 
 import warnings
+from typing import Callable, NamedTuple, Optional
 
 import numpy as np
 import pytest
@@ -15,20 +16,50 @@ from pairwise_compare import (
     SpearmanCorrelation,
 )
 
-# rows with ties, an exact copy (a row 1 and 0), a row with the same value everywhere, a row of zeros, and a missing value
+# rows with ties, an exact copy (rows 1 and 0), rows with the same value everywhere (the second one with a mean that is not
+# exact), a row of zeros, a missing value, and a perfectly correlated and anticorrelated row of integers
 MESSY = np.array(
-    [[1, 2, 2, 3], [1, 2, 2, 3], [4, 4, 4, 4], [0, 0, 0, 0], [3, 1, np.nan, 2], [5, 1, 4, 1], [2, 2, 1, 1]], dtype=float
+    [
+        [1, 2, 2, 3],
+        [1, 2, 2, 3],
+        [4, 4, 4, 4],
+        [0.1, 0.1, 0.1, 0.1],
+        [0, 0, 0, 0],
+        [3, 1, np.nan, 2],
+        [5, 1, 4, 1],
+        [2, 2, 1, 1],
+        [1, 2, 3, 4],
+        [2, 4, 6, 8],
+        [4, 3, 2, 1],
+    ],
+    dtype=float,
 )
 
-# each metric: its comparator, the same metric from scipy for two rows, its default column name, and the warning it gives
-# for a row that has no value for it (a row with the same value everywhere, or of zeros)
+
+
+class Metric(NamedTuple):
+    """A comparator, the same metric from scipy for two rows, and the warning for a row that has no value for it."""
+
+    comparator: type
+    oracle: Callable
+    name: str  # the default name of the column of the results
+    warning: Optional[str]  # None when every row has a value
+
+
+# the warning is for a row with the same value everywhere (correlations) or of zeros (cosine)
 METRICS = [
-    pytest.param(PearsonsCorrelation, lambda a, b: 1 - distance.correlation(a, b), "pearsons_correlation", "same value in every feature", id="Pearson"),
-    pytest.param(SpearmanCorrelation, lambda a, b: stats.spearmanr(a, b).statistic, "spearman_correlation", "same value in every feature", id="Spearman"),
-    pytest.param(CosineSimilarity, lambda a, b: 1 - distance.cosine(a, b), "cosine_similarity", "zero in every feature", id="cosine"),
-    pytest.param(EuclideanDistance, distance.euclidean, "euclidean_distance", None, id="Euclidean"),
-    pytest.param(ManhattanDistance, distance.cityblock, "manhattan_distance", None, id="Manhattan"),
+    pytest.param(Metric(PearsonsCorrelation, lambda a, b: 1 - distance.correlation(a, b), "pearsons_correlation", "same value in every feature"), id="Pearson"),
+    pytest.param(Metric(SpearmanCorrelation, lambda a, b: stats.spearmanr(a, b).statistic, "spearman_correlation", "same value in every feature"), id="Spearman"),
+    pytest.param(Metric(CosineSimilarity, lambda a, b: 1 - distance.cosine(a, b), "cosine_similarity", "zero in every feature"), id="cosine"),
+    pytest.param(Metric(EuclideanDistance, distance.euclidean, "euclidean_distance", None), id="Euclidean"),
+    pytest.param(Metric(ManhattanDistance, distance.cityblock, "manhattan_distance", None), id="Manhattan"),
 ]
+
+
+@pytest.fixture(params=METRICS)
+def metric(request):
+    """Each metric in turn."""
+    return request.param
 
 
 def scipy_values(oracle, values, rows0, rows1):
@@ -53,8 +84,7 @@ def compare(comparator, values, rows0, rows1):
         pytest.param(300, lambda n: (np.arange(n // 2), np.arange(n // 2, n)), id="gathered_pairs"),
     ],
 )
-@pytest.mark.parametrize("metric, oracle, name, warning", METRICS)
-def test_matches_scipy_for_every_pair(monkeypatch, metric, oracle, name, warning, block_elements, n_rows, pairs):
+def test_matches_scipy_for_every_pair(monkeypatch, metric, block_elements, n_rows, pairs):
     """Matches scipy for every pair, with ties, for pairs picked one by one and for matrix products, in blocks or not."""
     monkeypatch.setattr("pairwise_compare.comparators.Comparator._BLOCK_ELEMENTS", block_elements)
     values = np.random.default_rng(0).integers(0, 5, size=(n_rows, 6)).astype(float)  # small integers, so there are ties
@@ -62,55 +92,33 @@ def test_matches_scipy_for_every_pair(monkeypatch, metric, oracle, name, warning
 
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
-        values_found = compare(metric(), values, rows0, rows1)
+        values_found = compare(metric.comparator(), values, rows0, rows1)
 
-    np.testing.assert_allclose(values_found, scipy_values(oracle, values, rows0, rows1), atol=1e-12, equal_nan=True)
+    np.testing.assert_allclose(values_found, scipy_values(metric.oracle, values, rows0, rows1), atol=1e-12, equal_nan=True)
 
 
-@pytest.mark.parametrize("metric, oracle, name, warning", METRICS)
-def test_rows_without_a_value_give_nan_and_one_warning_and_the_others_match_scipy(metric, oracle, name, warning):
-    """Same-valued, zero and missing rows, and copies, ties: scipy's values, with NaN for the rows that have none, and one warning."""
+def test_rows_without_a_value_give_nan_and_one_warning_and_the_others_match_scipy(metric):
+    """Same-valued, zero and missing rows, copies and ties: scipy's values, with NaN for the rows that have none, and one warning."""
     rows0, rows1 = np.triu_indices(len(MESSY), 1)
 
     with warnings.catch_warnings(record=True) as caught:
         warnings.simplefilter("always")
-        values = compare(metric(), MESSY, rows0, rows1)
+        values = compare(metric.comparator(), MESSY, rows0, rows1)
 
-    np.testing.assert_allclose(values, scipy_values(oracle, MESSY, rows0, rows1), atol=1e-12, equal_nan=True)
-    assert [w.category for w in caught] == ([UserWarning] if warning else [])
-    assert warning is None or warning in str(caught[0].message)
+    np.testing.assert_allclose(values, scipy_values(metric.oracle, MESSY, rows0, rows1), atol=1e-12, equal_nan=True)
+    assert [w.category for w in caught] == ([UserWarning] if metric.warning else [])
+    assert metric.warning is None or metric.warning in str(caught[0].message)
 
 
-@pytest.mark.parametrize("metric, oracle, name, warning", METRICS)
-def test_default_and_custom_names_of_the_columns(metric, oracle, name, warning):
+def test_default_and_custom_names_of_the_columns(metric):
     """The default name of the column of the results, and a custom one."""
-    assert metric().name == name
-    assert metric(name="other").name == "other"
-
-
-def test_pearson_gives_perfect_correlations_for_integers_and_ignores_the_rounding_of_the_mean():
-    """Perfect correlations for integers, and a same-valued row whose mean is not exact (0.1) is detected."""
-    correlations = compare(PearsonsCorrelation(), [[1, 2, 3], [2, 4, 6], [3, 2, 1]], [0, 0], [1, 2])
-    assert correlations == pytest.approx([1.0, -1.0])
-
-    with pytest.warns(UserWarning, match="same value in every feature") as caught:
-        values = compare(PearsonsCorrelation(), [[0.1, 0.1, 0.1], [3.0, 2.0, 1.0]], [0], [1])
-
-    assert np.isnan(values[0]) and len(caught) == 1
-
-
-def test_missing_feature_values_give_nan_for_that_row_only():
-    """Missing feature values give nan for that row only."""
-    correlations = compare(PearsonsCorrelation(), [[1.0, np.nan, 3.0], [1.0, 2.0, 4.0], [1.0, 5.0, 2.0]], [0, 1], [2, 2])
-
-    assert np.isnan(correlations[0])
-    assert correlations[1] == pytest.approx(np.corrcoef([1.0, 2.0, 4.0], [1.0, 5.0, 2.0])[0, 1])
+    assert metric.comparator().name == metric.name
+    assert metric.comparator(name="other").name == "other"
 
 
 def test_the_metrics_measure_what_the_documentation_says():
     """Spearman follows any increasing relation, cosine does not center the features, and a distance is 0 for a copy."""
     increasing = [[1.0, 2.0, 3.0, 4.0], [1.0, 10.0, 100.0, 1000.0]]
-
     assert compare(SpearmanCorrelation(), increasing, [0], [1]) == pytest.approx([1.0])
     assert compare(PearsonsCorrelation(), increasing, [0], [1])[0] < 0.9
 
@@ -121,9 +129,3 @@ def test_the_metrics_measure_what_the_documentation_says():
 
     assert compare(EuclideanDistance(), [[1.0, 2.0], [1.0, 2.0]], [0], [1]) == [0.0]
     assert compare(ManhattanDistance(), [[1.0, 2.0], [4.0, 6.0]], [0], [1]) == [7.0]
-
-    # rows that have a value for every metric give no warning
-    with warnings.catch_warnings():
-        warnings.simplefilter("error")
-        for metric in (PearsonsCorrelation, SpearmanCorrelation, CosineSimilarity, EuclideanDistance, ManhattanDistance):
-            assert compare(metric(), [[1.0, 2.0, 4.0], [3.0, 1.0, 2.0]], [0], [1]).shape == (1,)
